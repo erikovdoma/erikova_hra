@@ -137,6 +137,20 @@
     box-shadow: inset 0 -3px 0 #1c4aa0, 0 2px 4px rgba(0, 0, 0, 0.5);
   }
 
+  .monstrum {
+    width: 76%;
+    height: 76%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 25%;
+    background: #6a1b9a;
+    box-shadow: inset 0 -3px 0 #3e0c5c, 0 2px 4px rgba(0, 0, 0, 0.5);
+    color: #fff;
+    font-weight: 700;
+    font-size: 20px;
+  }
+
   .policko.stred {
     background: #d62828;
   }
@@ -369,7 +383,10 @@
 <body>
   <h1>Erikova hra</h1>
   <div id="mapa"></div>
-  <div id="hp" class="panel">HP: <span id="hp-hodnota"></span></div>
+  <div id="hp" class="panel">
+    <div>HP: <span id="hp-hodnota"></span></div>
+    <div>Akce: <span id="akce-hodnota"></span></div>
+  </div>
 
   <div id="uvod" class="obrazovka">
     <div>
@@ -492,12 +509,84 @@
   hrac.className = "hrac";
   const pozice = { radek: STRED, sloupec: STRED };
 
-  function postavHrace() {
-    const index = pozice.radek * VELIKOST + pozice.sloupec;
-    mapa.children[index].appendChild(hrac);
+  function postav(figurka, kde) {
+    const index = kde.radek * VELIKOST + kde.sloupec;
+    mapa.children[index].appendChild(figurka);
   }
 
-  postavHrace();
+  function stejneMisto(a, b) {
+    return a.radek === b.radek && a.sloupec === b.sloupec;
+  }
+
+  postav(hrac, pozice);
+
+  // ---------- Monstrum ----------
+
+  const MONSTRUM_ZIVOTY = 2;
+  const MONSTRUM_KROKY = 2;
+  const AKCE = VLASTNOSTI.find((vlastnost) => vlastnost.nazev === "Akce").hodnota;
+
+  const monstrum = document.createElement("div");
+  monstrum.className = "monstrum";
+  monstrum.textContent = MONSTRUM_ZIVOTY;
+
+  // Monstrum se objeví na náhodném políčku aspoň 6 kroků od hráče
+  function nahodneMistoProMonstrum() {
+    while (true) {
+      const misto = {
+        radek: Math.floor(Math.random() * VELIKOST),
+        sloupec: Math.floor(Math.random() * VELIKOST),
+      };
+      const vzdalenost = Math.abs(misto.radek - pozice.radek) + Math.abs(misto.sloupec - pozice.sloupec);
+      if (vzdalenost >= 6) return misto;
+    }
+  }
+
+  const monstrumPozice = nahodneMistoProMonstrum();
+  postav(monstrum, monstrumPozice);
+
+  let zbyvaAkci = AKCE;
+  let hrajeMonstrum = false;
+  const akceHodnota = document.getElementById("akce-hodnota");
+  akceHodnota.textContent = zbyvaAkci;
+
+  // Jeden krok monstra směrem k hráči. Nejdřív zkusí směr, kde je hráč dál.
+  function krokMonstra() {
+    const rozdilRadku = pozice.radek - monstrumPozice.radek;
+    const rozdilSloupcu = pozice.sloupec - monstrumPozice.sloupec;
+    const moznosti = [
+      { radek: Math.sign(rozdilRadku), sloupec: 0, jakDaleko: Math.abs(rozdilRadku) },
+      { radek: 0, sloupec: Math.sign(rozdilSloupcu), jakDaleko: Math.abs(rozdilSloupcu) },
+    ].filter((krok) => krok.jakDaleko > 0)
+     .sort((a, b) => b.jakDaleko - a.jakDaleko);
+
+    for (const krok of moznosti) {
+      const kam = {
+        radek: monstrumPozice.radek + krok.radek,
+        sloupec: monstrumPozice.sloupec + krok.sloupec,
+      };
+      if (stejneMisto(kam, pozice)) continue;
+      monstrumPozice.radek = kam.radek;
+      monstrumPozice.sloupec = kam.sloupec;
+      postav(monstrum, monstrumPozice);
+      return;
+    }
+  }
+
+  function tahMonstra() {
+    hrajeMonstrum = true;
+    let krok = 0;
+    const casovac = setInterval(() => {
+      krokMonstra();
+      krok++;
+      if (krok >= MONSTRUM_KROKY) {
+        clearInterval(casovac);
+        zbyvaAkci = AKCE;
+        akceHodnota.textContent = zbyvaAkci;
+        hrajeMonstrum = false;
+      }
+    }, 300);
+  }
 
   // Klávesy podle místa na klávesnici, takže fungují i s českou klávesnicí
   const POHYBY = {
@@ -514,14 +603,22 @@
 
   document.addEventListener("keydown", (udalost) => {
     const pohyb = POHYBY[udalost.code];
-    if (!pohyb || !seHraje()) return;
-    const radek = pozice.radek + pohyb.radek;
-    const sloupec = pozice.sloupec + pohyb.sloupec;
+    if (!pohyb || !seHraje() || hrajeMonstrum) return;
+    const kam = {
+      radek: pozice.radek + pohyb.radek,
+      sloupec: pozice.sloupec + pohyb.sloupec,
+    };
     // Z mapy se vyjít nedá
-    if (radek < 0 || radek >= VELIKOST || sloupec < 0 || sloupec >= VELIKOST) return;
-    pozice.radek = radek;
-    pozice.sloupec = sloupec;
-    postavHrace();
+    if (kam.radek < 0 || kam.radek >= VELIKOST || kam.sloupec < 0 || kam.sloupec >= VELIKOST) return;
+    // Na monstrum se vstoupit nedá
+    if (stejneMisto(kam, monstrumPozice)) return;
+    pozice.radek = kam.radek;
+    pozice.sloupec = kam.sloupec;
+    postav(hrac, pozice);
+
+    zbyvaAkci--;
+    akceHodnota.textContent = zbyvaAkci;
+    if (zbyvaAkci === 0) tahMonstra();
   });
 
   function ukaz(obrazovka) {
