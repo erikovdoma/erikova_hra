@@ -114,6 +114,16 @@
     font-size: 36px;
   }
 
+  .menu-vlastnosti .penize-ramecek {
+    aspect-ratio: auto;
+    padding: 8px 0;
+  }
+
+  .menu-vlastnosti .penize-ramecek .vlastnost-hodnota {
+    font-size: 30px;
+    color: #ffd000;
+  }
+
   .policko {
     background: var(--drevo);
     cursor: pointer;
@@ -402,6 +412,7 @@
     <div>HP: <span id="hp-hodnota"></span></div>
     <div>Akce: <span id="akce-hodnota"></span></div>
     <div>Kolo: <span id="kolo-hodnota"></span></div>
+    <div>Peníze: <span class="penize-hodnota"></span> Kč</div>
   </div>
 
   <div id="uvod" class="obrazovka">
@@ -425,6 +436,12 @@
       <div class="panel menu-vlastnosti">
         <p class="panel-nadpis">Vlastnosti</p>
         <div class="panel-vnitrek vlastnosti-seznam"></div>
+        <p class="panel-nadpis panel-nadpis-dalsi">Peníze</p>
+        <div class="panel-vnitrek">
+          <div class="vlastnost penize-ramecek">
+            <span class="vlastnost-hodnota"><span class="penize-hodnota"></span> Kč</span>
+          </div>
+        </div>
       </div>
       </div>
     </div>
@@ -598,6 +615,7 @@
     zombik.zivoty -= ZRANENI;
     zombik.prvek.textContent = zombik.zivoty;
     if (zombik.zivoty <= 0) {
+      pridejPenize(1);
       zombik.prvek.remove();
       zombici = zombici.filter((jiny) => jiny !== zombik);
       if (zombici.length === 0) {
@@ -794,9 +812,30 @@
     }
   }
 
+  // Peníze má každý profil svoje a pamatují se i po vypnutí hry
+  let penize = 0;
+
+  function ukazPenize() {
+    for (const misto of document.querySelectorAll(".penize-hodnota")) {
+      misto.textContent = penize;
+    }
+  }
+
+  function nactiPenize() {
+    penize = nacti("penize:" + aktualniProfil, 0);
+    ukazPenize();
+  }
+
+  function pridejPenize(kolik) {
+    penize += kolik;
+    uloz("penize:" + aktualniProfil, penize);
+    ukazPenize();
+  }
+
   function vyberProfil(jmeno) {
     aktualniProfil = jmeno;
     uloz("aktualniProfil", jmeno);
+    nactiPenize();
     ukazJmeno(jmeno);
     schovej(profily);
     ukaz(uvod);
@@ -857,6 +896,9 @@
   document.getElementById("zrusit-ano").addEventListener("click", () => {
     vsechnyProfily = vsechnyProfily.filter((jmeno) => jmeno !== aktualniProfil);
     uloz("profily", vsechnyProfily);
+    try {
+      localStorage.removeItem("penize:" + aktualniProfil);
+    } catch (e) {}
     aktualniProfil = null;
     uloz("aktualniProfil", null);
     schovej(potvrzeni);
@@ -866,6 +908,7 @@
   // Bez vybraného profilu se začíná výběrem profilu
   if (aktualniProfil) {
     ukazJmeno(aktualniProfil);
+    nactiPenize();
   } else {
     ukazProfily();
   }
