@@ -601,6 +601,19 @@
       obrazovka.classList.contains("skryte"));
   }
 
+  function pouzijAkci() {
+    zbyvaAkci--;
+    akceHodnota.textContent = zbyvaAkci;
+    if (zbyvaAkci === 0) tahMonstra();
+  }
+
+  // Mezerník: jedna akce se spotřebuje a hráč zůstane stát
+  document.addEventListener("keydown", (udalost) => {
+    if (udalost.code !== "Space" || !seHraje() || hrajeMonstrum) return;
+    udalost.preventDefault();
+    pouzijAkci();
+  });
+
   document.addEventListener("keydown", (udalost) => {
     const pohyb = POHYBY[udalost.code];
     if (!pohyb || !seHraje() || hrajeMonstrum) return;
@@ -615,10 +628,7 @@
     pozice.radek = kam.radek;
     pozice.sloupec = kam.sloupec;
     postav(hrac, pozice);
-
-    zbyvaAkci--;
-    akceHodnota.textContent = zbyvaAkci;
-    if (zbyvaAkci === 0) tahMonstra();
+    pouzijAkci();
   });
 
   function ukaz(obrazovka) {
