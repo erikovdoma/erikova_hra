@@ -54,6 +54,14 @@
     background: #f0cf85;
   }
 
+  .policko.stred {
+    background: #d62828;
+  }
+
+  .policko.stred:hover {
+    background: #f04a4a;
+  }
+
   /* ---------- Menu ve stylu Factoria ---------- */
 
   .obrazovka {
@@ -208,11 +216,15 @@
   const mapa = document.getElementById("mapa");
   const uvod = document.getElementById("uvod");
   const pauza = document.getElementById("pauza");
+  const STRED = Math.floor(VELIKOST / 2);
 
   for (let radek = 0; radek < VELIKOST; radek++) {
     for (let sloupec = 0; sloupec < VELIKOST; sloupec++) {
       const policko = document.createElement("div");
       policko.className = "policko";
+      if (radek === STRED && sloupec === STRED) {
+        policko.classList.add("stred");
+      }
       policko.dataset.radek = radek;
       policko.dataset.sloupec = sloupec;
       mapa.appendChild(policko);
