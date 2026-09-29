@@ -678,7 +678,7 @@
     }, 300);
   }
 
-  // Zelené tlačítko po smrti: hra začne znovu od začátku
+  // Vrátí hráče, monstrum i akce na začátek
   function novaHra() {
     zivotyHrace = ZIVOTY;
     hpHodnota.textContent = zivotyHrace;
@@ -699,7 +699,11 @@
     schovej(smrt);
   }
 
-  document.getElementById("znovu").addEventListener("click", novaHra);
+  // Po smrti: připraví novou hru a vrátí hráče do hlavního menu
+  document.getElementById("znovu").addEventListener("click", () => {
+    novaHra();
+    ukaz(uvod);
+  });
 
   // Klávesy podle místa na klávesnici, takže fungují i s českou klávesnicí
   const POHYBY = {
