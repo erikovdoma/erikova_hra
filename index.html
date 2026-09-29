@@ -40,9 +40,62 @@
     border: 6px solid var(--drevo-tmave);
     border-radius: 6px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-    /* Deska je vždycky čtvercová a vejde se do okna */
-    width: min(97vw, calc(100vh - 60px));
+    /* Deska je vždycky čtvercová a vejde se do okna i s panelem vedle */
+    box-sizing: border-box;
+    width: min(calc(97vw - 200px), calc(100vh - 70px));
     aspect-ratio: 1;
+  }
+
+  #hra {
+    display: flex;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  /* ---------- Panel s vlastnostmi vpravo ---------- */
+
+  #vlastnosti {
+    width: 170px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #vlastnosti .panel-vnitrek {
+    flex: 1;
+    justify-content: space-between;
+  }
+
+  #vlastnosti .panel {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .vlastnost {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #2a2929;
+    box-shadow:
+      inset 0 2px 3px #111,
+      inset 0 -1px 0 #555,
+      0 0 0 1px #1a1a1a;
+  }
+
+  .vlastnost-nazev {
+    font-size: 17px;
+    font-weight: 600;
+    color: #c8c0b0;
+  }
+
+  .vlastnost-hodnota {
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 1.1;
+    color: #ffe6c0;
   }
 
   .policko {
@@ -193,7 +246,8 @@
     color: #c8c0b0;
   }
 
-  #jmeno-profilu {
+  #jmeno-profilu,
+  .jmeno-hrace {
     font-weight: 700;
     color: #ffe6c0;
   }
@@ -284,7 +338,33 @@
 </head>
 <body>
   <h1>Erikova hra</h1>
-  <div id="mapa"></div>
+  <div id="hra">
+    <div id="mapa"></div>
+    <div id="vlastnosti">
+      <div class="panel">
+        <p class="panel-nadpis">Vlastnosti</p>
+        <p class="profil-radek">Profil: <span class="jmeno-hrace"></span></p>
+        <div class="panel-vnitrek">
+          <div class="vlastnost">
+            <span class="vlastnost-nazev">Životy</span>
+            <span class="vlastnost-hodnota" id="zivoty">1</span>
+          </div>
+          <div class="vlastnost">
+            <span class="vlastnost-nazev">Akce</span>
+            <span class="vlastnost-hodnota" id="akce">2</span>
+          </div>
+          <div class="vlastnost">
+            <span class="vlastnost-nazev">Dostřel</span>
+            <span class="vlastnost-hodnota" id="dostrel">3</span>
+          </div>
+          <div class="vlastnost">
+            <span class="vlastnost-nazev">Zranění</span>
+            <span class="vlastnost-hodnota" id="zraneni">1</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div id="uvod" class="obrazovka">
     <div>
@@ -405,10 +485,17 @@
   let vsechnyProfily = nacti("profily", []);
   let aktualniProfil = nacti("aktualniProfil", null);
 
+  function ukazJmeno(jmeno) {
+    document.getElementById("jmeno-profilu").textContent = jmeno;
+    for (const misto of document.querySelectorAll(".jmeno-hrace")) {
+      misto.textContent = jmeno;
+    }
+  }
+
   function vyberProfil(jmeno) {
     aktualniProfil = jmeno;
     uloz("aktualniProfil", jmeno);
-    document.getElementById("jmeno-profilu").textContent = jmeno;
+    ukazJmeno(jmeno);
     schovej(profily);
     ukaz(uvod);
   }
@@ -476,7 +563,7 @@
 
   // Bez vybraného profilu se začíná výběrem profilu
   if (aktualniProfil) {
-    document.getElementById("jmeno-profilu").textContent = aktualniProfil;
+    ukazJmeno(aktualniProfil);
   } else {
     ukazProfily();
   }
