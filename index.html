@@ -33,7 +33,9 @@
 
   #mapa {
     display: grid;
-    grid-template-columns: repeat(var(--velikost), 1fr);
+    /* Všechny řádky i sloupce stejně velké, ať jsou políčka čtverečky */
+    grid-template-columns: repeat(var(--velikost), minmax(0, 1fr));
+    grid-template-rows: repeat(var(--velikost), minmax(0, 1fr));
     gap: 2px;
     padding: 2px;
     background: var(--cara);
@@ -129,7 +131,7 @@
 
   .hrac {
     width: 70%;
-    aspect-ratio: 1;
+    height: 70%;
     border-radius: 50%;
     background: #2f6fe0;
     box-shadow: inset 0 -3px 0 #1c4aa0, 0 2px 4px rgba(0, 0, 0, 0.5);
