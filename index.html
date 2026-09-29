@@ -151,15 +151,6 @@
     font-size: 20px;
   }
 
-  /* Hráč zabliká červeně, když ho monstrum sekne */
-  .hrac.zasah {
-    animation: zasah 0.4s;
-  }
-
-  @keyframes zasah {
-    50% { background: #ff2020; transform: scale(1.2); }
-  }
-
   /* Monstrum, na které se dá vystřelit */
   .monstrum.na-dostrel {
     cursor: crosshair;
@@ -632,9 +623,6 @@
     if (Math.abs(rozdilRadku) + Math.abs(rozdilSloupcu) === 1) {
       zivotyHrace--;
       hpHodnota.textContent = zivotyHrace;
-      hrac.classList.remove("zasah");
-      void hrac.offsetWidth;
-      hrac.classList.add("zasah");
       return;
     }
 
