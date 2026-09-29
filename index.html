@@ -87,6 +87,11 @@
     background: rgba(0, 0, 0, 0.55);
   }
 
+  #ukonceno {
+    background: #000;
+    z-index: 20;
+  }
+
   .panel {
     background: #313031;
     padding: 8px 12px 12px;
@@ -195,9 +200,14 @@
         <p class="panel-nadpis">Hlavní menu</p>
         <div class="panel-vnitrek">
           <button id="hrat" class="tlacitko tlacitko-zelene">Hrát</button>
+          <button id="konec" class="tlacitko tlacitko-cervene">Konec hry</button>
         </div>
       </div>
     </div>
+  </div>
+
+  <div id="ukonceno" class="obrazovka skryte">
+    <p class="velky-nazev">Hra byla ukončena</p>
   </div>
 
   <div id="pauza" class="obrazovka skryte">
@@ -241,6 +251,12 @@
 
   document.getElementById("hrat").addEventListener("click", () => {
     schovej(uvod);
+  });
+
+  // Zkusí zavřít okno. Když to prohlížeč nedovolí, ukáže aspoň černou obrazovku.
+  document.getElementById("konec").addEventListener("click", () => {
+    window.close();
+    ukaz(document.getElementById("ukonceno"));
   });
 
   document.getElementById("pokracovat").addEventListener("click", () => {
