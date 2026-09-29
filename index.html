@@ -40,37 +40,13 @@
     border: 6px solid var(--drevo-tmave);
     border-radius: 6px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-    /* Deska je vždycky čtvercová a vejde se do okna i s panelem vedle */
+    /* Deska je vždycky čtvercová a vejde se do okna */
     box-sizing: border-box;
-    width: min(calc(97vw - 200px), calc(100vh - 70px));
+    width: min(97vw, calc(100vh - 70px));
     aspect-ratio: 1;
   }
 
-  #hra {
-    display: flex;
-    align-items: stretch;
-    gap: 16px;
-  }
-
-  /* ---------- Panel s vlastnostmi vpravo ---------- */
-
-  #vlastnosti {
-    width: 170px;
-    display: flex;
-    flex-direction: column;
-  }
-
-  #vlastnosti .panel-vnitrek {
-    flex: 1;
-    justify-content: space-between;
-  }
-
-  #vlastnosti .panel {
-    min-width: 0;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-  }
+  /* ---------- Rámečky s vlastnostmi (v hlavním menu) ---------- */
 
   .vlastnost {
     aspect-ratio: 1;
@@ -363,16 +339,7 @@
 </head>
 <body>
   <h1>Erikova hra</h1>
-  <div id="hra">
-    <div id="mapa"></div>
-    <div id="vlastnosti">
-      <div class="panel">
-        <p class="panel-nadpis">Vlastnosti</p>
-        <p class="profil-radek">Profil: <span class="jmeno-hrace"></span></p>
-        <div class="panel-vnitrek vlastnosti-seznam"></div>
-      </div>
-    </div>
-  </div>
+  <div id="mapa"></div>
 
   <div id="uvod" class="obrazovka">
     <div>
