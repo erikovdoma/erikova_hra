@@ -883,8 +883,9 @@
     schovej(pauza);
   });
 
-  // "Vypnout hru" vrátí hráče do hlavního menu
+  // "Vypnout hru" vrátí hráče do hlavního menu a další hra začne od začátku
   document.getElementById("vypnout").addEventListener("click", () => {
+    novaHra();
     schovej(pauza);
     ukaz(uvod);
   });
