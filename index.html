@@ -151,6 +151,15 @@
     font-size: 20px;
   }
 
+  /* Hráč zabliká červeně, když ho monstrum sekne */
+  .hrac.zasah {
+    animation: zasah 0.4s;
+  }
+
+  @keyframes zasah {
+    50% { background: #ff2020; transform: scale(1.2); }
+  }
+
   /* Monstrum, na které se dá vystřelit */
   .monstrum.na-dostrel {
     cursor: crosshair;
@@ -329,6 +338,14 @@
     box-shadow: inset 0 2px 3px #5e5e5e, 0 0 0 2px #e39827;
   }
 
+  #smrt {
+    background: rgba(60, 0, 0, 0.6);
+  }
+
+  .tlacitko-prazdne {
+    height: 44px;
+  }
+
   #potvrzeni {
     background: rgba(0, 0, 0, 0.6);
     z-index: 15;
@@ -445,6 +462,15 @@
           <button id="zrusit-ne" class="tlacitko">Ne</button>
           <button id="zrusit-ano" class="tlacitko tlacitko-cervene">Ano, zrušit</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="smrt" class="obrazovka skryte">
+    <div class="panel">
+      <p class="panel-nadpis">Zemřel jsi</p>
+      <div class="panel-vnitrek">
+        <button id="znovu" class="tlacitko tlacitko-zelene tlacitko-prazdne"></button>
       </div>
     </div>
   </div>
@@ -589,11 +615,29 @@
     pouzijAkci();
   });
 
-  // Jeden krok monstra směrem k hráči. Nejdřív zkusí směr, kde je hráč dál.
+  // ---------- Životy hráče ----------
+
+  const ZIVOTY = VLASTNOSTI.find((vlastnost) => vlastnost.nazev === "Životy").hodnota;
+  let zivotyHrace = ZIVOTY;
+  const hpHodnota = document.getElementById("hp-hodnota");
+  const smrt = document.getElementById("smrt");
+
+  // Jedna akce monstra: když stojí vedle hráče, sekne ho. Jinak jde k němu,
+  // a to nejdřív ve směru, kde je hráč dál.
   function krokMonstra() {
     if (!monstrumZije) return;
     const rozdilRadku = pozice.radek - monstrumPozice.radek;
     const rozdilSloupcu = pozice.sloupec - monstrumPozice.sloupec;
+
+    if (Math.abs(rozdilRadku) + Math.abs(rozdilSloupcu) === 1) {
+      zivotyHrace--;
+      hpHodnota.textContent = zivotyHrace;
+      hrac.classList.remove("zasah");
+      void hrac.offsetWidth;
+      hrac.classList.add("zasah");
+      return;
+    }
+
     const moznosti = [
       { radek: Math.sign(rozdilRadku), sloupec: 0, jakDaleko: Math.abs(rozdilRadku) },
       { radek: 0, sloupec: Math.sign(rozdilSloupcu), jakDaleko: Math.abs(rozdilSloupcu) },
@@ -619,6 +663,11 @@
     const casovac = setInterval(() => {
       krokMonstra();
       krok++;
+      if (zivotyHrace <= 0) {
+        clearInterval(casovac);
+        setTimeout(() => ukaz(smrt), 400);
+        return;
+      }
       if (krok >= MONSTRUM_KROKY) {
         clearInterval(casovac);
         zbyvaAkci = AKCE;
@@ -629,6 +678,29 @@
     }, 300);
   }
 
+  // Zelené tlačítko po smrti: hra začne znovu od začátku
+  function novaHra() {
+    zivotyHrace = ZIVOTY;
+    hpHodnota.textContent = zivotyHrace;
+    pozice.radek = STRED;
+    pozice.sloupec = STRED;
+    postav(hrac, pozice);
+
+    monstrumZivoty = MONSTRUM_ZIVOTY;
+    monstrum.textContent = monstrumZivoty;
+    monstrumZije = true;
+    Object.assign(monstrumPozice, nahodneMistoProMonstrum());
+    postav(monstrum, monstrumPozice);
+
+    zbyvaAkci = AKCE;
+    akceHodnota.textContent = zbyvaAkci;
+    hrajeMonstrum = false;
+    ukazCil();
+    schovej(smrt);
+  }
+
+  document.getElementById("znovu").addEventListener("click", novaHra);
+
   // Klávesy podle místa na klávesnici, takže fungují i s českou klávesnicí
   const POHYBY = {
     KeyW: { radek: -1, sloupec: 0 },
@@ -638,7 +710,7 @@
   };
 
   function seHraje() {
-    return [uvod, profily, pauza, potvrzeni].every((obrazovka) =>
+    return [uvod, profily, pauza, potvrzeni, smrt].every((obrazovka) =>
       obrazovka.classList.contains("skryte"));
   }
 
@@ -830,6 +902,7 @@
     // V hlavním menu a ve výběru profilu Esc nic nedělá
     if (!uvod.classList.contains("skryte")) return;
     if (!profily.classList.contains("skryte")) return;
+    if (!smrt.classList.contains("skryte")) return;
 
     if (pauza.classList.contains("skryte")) {
       ukaz(pauza);
