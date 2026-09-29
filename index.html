@@ -181,6 +181,35 @@
     text-shadow: 0 4px 0 #000, 0 0 20px rgba(0, 0, 0, 0.8);
   }
 
+  .upozorneni {
+    max-width: 300px;
+    margin-top: 12px;
+    padding: 8px 12px 12px;
+    background: #4a3a1c;
+    box-shadow: inset 0 0 0 1px #e39827;
+    text-align: center;
+  }
+
+  .upozorneni p {
+    margin: 0 0 10px;
+    font-size: 15px;
+    color: #ffe6c0;
+  }
+
+  .upozorneni .tlacitko {
+    display: inline-block;
+    font-size: 16px;
+    text-decoration: none;
+  }
+
+  .upozorneni.blika {
+    animation: blikni 0.3s 3;
+  }
+
+  @keyframes blikni {
+    50% { box-shadow: inset 0 0 0 3px #ff4040; }
+  }
+
   .napoveda {
     margin: 4px 0 0;
     font-size: 13px;
@@ -201,6 +230,10 @@
         <div class="panel-vnitrek">
           <button id="hrat" class="tlacitko tlacitko-zelene">Hrát</button>
           <button id="konec" class="tlacitko tlacitko-cervene">Konec hry</button>
+        </div>
+        <div id="upozorneni" class="upozorneni skryte">
+          <p>Hra je otevřená v prohlížeči, ne jako program. Prohlížeč nedovolí, aby ji tlačítko Konec hry vypnulo.</p>
+          <a class="tlacitko tlacitko-zelene" href="erikovahra://start">Spustit jako program</a>
         </div>
       </div>
     </div>
@@ -253,9 +286,26 @@
     schovej(uvod);
   });
 
-  // Zkusí zavřít okno. Když to prohlížeč nedovolí, ukáže aspoň černou obrazovku.
+  // Ikona "Erikova hra" na ploše spouští hru s ?program=1 ve vlastním okně,
+  // které jde zavřít. Běžná záložka prohlížeče (třeba Firefox) zavřít nejde.
+  const JE_PROGRAM = new URLSearchParams(location.search).has("program");
+  const upozorneni = document.getElementById("upozorneni");
+
+  if (!JE_PROGRAM) {
+    ukaz(upozorneni);
+    // Zkusí rovnou spustit program (prohlížeč se může zeptat, jestli smí)
+    location.href = "erikovahra://start";
+  }
+
   document.getElementById("konec").addEventListener("click", () => {
+    if (!JE_PROGRAM) {
+      upozorneni.classList.remove("blika");
+      void upozorneni.offsetWidth;
+      upozorneni.classList.add("blika");
+      return;
+    }
     window.close();
+    // Kdyby se okno přesto nezavřelo, ukáže aspoň černou obrazovku
     ukaz(document.getElementById("ukonceno"));
   });
 
