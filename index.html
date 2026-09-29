@@ -224,6 +224,27 @@
     box-shadow: inset 0 2px 3px #5e5e5e, 0 0 0 2px #e39827;
   }
 
+  #potvrzeni {
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 15;
+  }
+
+  .otazka {
+    margin: 0;
+    font-size: 17px;
+    text-align: center;
+  }
+
+  .otazka b {
+    color: #ffe6c0;
+  }
+
+  .radek-tlacitek {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
   .upozorneni {
     max-width: 300px;
     margin-top: 12px;
@@ -274,6 +295,7 @@
         <div class="panel-vnitrek">
           <button id="hrat" class="tlacitko tlacitko-zelene">Hrát</button>
           <button id="odejit" class="tlacitko tlacitko-cervene">Odejít z profilu</button>
+          <button id="zrusit" class="tlacitko tlacitko-cervene">Zrušit profil</button>
           <button id="konec" class="tlacitko tlacitko-cervene">Konec hry</button>
         </div>
         <div id="upozorneni" class="upozorneni skryte">
@@ -295,6 +317,19 @@
           <input id="nove-jmeno" class="policko-text" maxlength="20" placeholder="Napiš jméno" autocomplete="off">
           <button class="tlacitko tlacitko-zelene">Vytvořit profil</button>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="potvrzeni" class="obrazovka skryte">
+    <div class="panel">
+      <p class="panel-nadpis">Zrušit profil</p>
+      <div class="panel-vnitrek">
+        <p class="otazka">Opravdu chceš navždy zrušit profil <b id="ruseny-profil"></b>?</p>
+        <div class="radek-tlacitek">
+          <button id="zrusit-ne" class="tlacitko">Ne</button>
+          <button id="zrusit-ano" class="tlacitko tlacitko-cervene">Ano, zrušit</button>
+        </div>
       </div>
     </div>
   </div>
@@ -416,6 +451,26 @@
   document.getElementById("odejit").addEventListener("click", () => {
     aktualniProfil = null;
     uloz("aktualniProfil", null);
+    ukazProfily();
+  });
+
+  const potvrzeni = document.getElementById("potvrzeni");
+
+  document.getElementById("zrusit").addEventListener("click", () => {
+    document.getElementById("ruseny-profil").textContent = aktualniProfil;
+    ukaz(potvrzeni);
+  });
+
+  document.getElementById("zrusit-ne").addEventListener("click", () => {
+    schovej(potvrzeni);
+  });
+
+  document.getElementById("zrusit-ano").addEventListener("click", () => {
+    vsechnyProfily = vsechnyProfily.filter((jmeno) => jmeno !== aktualniProfil);
+    uloz("profily", vsechnyProfily);
+    aktualniProfil = null;
+    uloz("aktualniProfil", null);
+    schovej(potvrzeni);
     ukazProfily();
   });
 
