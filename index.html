@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Erikova hra</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
     --velikost: 19;
@@ -20,7 +22,7 @@
     align-items: center;
     justify-content: center;
     background: #2e2a24;
-    font-family: sans-serif;
+    font-family: "Titillium Web", sans-serif;
     color: #f3e9d2;
   }
 
@@ -51,15 +53,161 @@
   .policko:hover {
     background: #f0cf85;
   }
+
+  /* ---------- Menu ve stylu Factoria ---------- */
+
+  .obrazovka {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+
+  .skryte {
+    display: none;
+  }
+
+  #uvod {
+    background:
+      radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0.7) 100%),
+      repeating-linear-gradient(45deg, #3a3631 0 24px, #35312c 24px 48px);
+  }
+
+  #pauza {
+    background: rgba(0, 0, 0, 0.55);
+  }
+
+  .panel {
+    background: #313031;
+    padding: 8px 12px 12px;
+    min-width: 300px;
+    box-shadow:
+      inset 0 1px 0 #454545,
+      inset 0 -1px 0 #1a1a1a,
+      0 0 0 1px #000,
+      0 10px 30px rgba(0, 0, 0, 0.7);
+  }
+
+  .panel-nadpis {
+    margin: 0 0 8px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #ffe6c0;
+  }
+
+  .panel-vnitrek {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    background: #414040;
+    box-shadow:
+      inset 0 2px 4px #1a1a1a,
+      inset 0 -1px 0 #555;
+  }
+
+  .tlacitko {
+    font-family: inherit;
+    font-size: 18px;
+    font-weight: 700;
+    color: #000;
+    padding: 8px 32px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    background: #8e8e8e;
+    box-shadow:
+      inset 0 2px 0 #b0b0b0,
+      inset 0 -2px 0 #5e5e5e,
+      0 0 0 1px #1a1a1a,
+      0 3px 4px rgba(0, 0, 0, 0.6);
+  }
+
+  .tlacitko:hover {
+    background: #e39827;
+    box-shadow:
+      inset 0 2px 0 #ffc062,
+      inset 0 -2px 0 #a86a10,
+      0 0 0 1px #1a1a1a,
+      0 0 10px rgba(255, 166, 40, 0.6);
+  }
+
+  .tlacitko:active {
+    transform: translateY(1px);
+    box-shadow:
+      inset 0 2px 4px rgba(0, 0, 0, 0.5),
+      0 0 0 1px #1a1a1a;
+  }
+
+  .tlacitko-zelene {
+    background: #5eb663;
+    box-shadow:
+      inset 0 2px 0 #8fdc93,
+      inset 0 -2px 0 #3a7d3e,
+      0 0 0 1px #1a1a1a,
+      0 3px 4px rgba(0, 0, 0, 0.6);
+  }
+
+  .tlacitko-cervene {
+    background: #fe5a5a;
+    box-shadow:
+      inset 0 2px 0 #ff9a9a,
+      inset 0 -2px 0 #b03030,
+      0 0 0 1px #1a1a1a,
+      0 3px 4px rgba(0, 0, 0, 0.6);
+  }
+
+  .velky-nazev {
+    margin: 0 0 32px;
+    font-size: 64px;
+    font-weight: 700;
+    color: #ffe6c0;
+    text-align: center;
+    text-shadow: 0 4px 0 #000, 0 0 20px rgba(0, 0, 0, 0.8);
+  }
+
+  .napoveda {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: #a09a90;
+    text-align: center;
+  }
 </style>
 </head>
 <body>
   <h1>Erikova hra</h1>
   <div id="mapa"></div>
 
+  <div id="uvod" class="obrazovka">
+    <div>
+      <p class="velky-nazev">Erikova hra</p>
+      <div class="panel">
+        <p class="panel-nadpis">Hlavní menu</p>
+        <div class="panel-vnitrek">
+          <button id="hrat" class="tlacitko tlacitko-zelene">Hrát</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="pauza" class="obrazovka skryte">
+    <div class="panel">
+      <p class="panel-nadpis">Menu</p>
+      <div class="panel-vnitrek">
+        <button id="pokracovat" class="tlacitko">Pokračovat</button>
+        <button id="vypnout" class="tlacitko tlacitko-cervene">Vypnout hru</button>
+      </div>
+      <p class="napoveda">Esc = zpátky do hry</p>
+    </div>
+  </div>
+
 <script>
   const VELIKOST = 19;
   const mapa = document.getElementById("mapa");
+  const uvod = document.getElementById("uvod");
+  const pauza = document.getElementById("pauza");
 
   for (let radek = 0; radek < VELIKOST; radek++) {
     for (let sloupec = 0; sloupec < VELIKOST; sloupec++) {
@@ -70,6 +218,40 @@
       mapa.appendChild(policko);
     }
   }
+
+  function ukaz(obrazovka) {
+    obrazovka.classList.remove("skryte");
+  }
+
+  function schovej(obrazovka) {
+    obrazovka.classList.add("skryte");
+  }
+
+  document.getElementById("hrat").addEventListener("click", () => {
+    schovej(uvod);
+  });
+
+  document.getElementById("pokracovat").addEventListener("click", () => {
+    schovej(pauza);
+  });
+
+  // "Vypnout hru" vrátí hráče do hlavního menu
+  document.getElementById("vypnout").addEventListener("click", () => {
+    schovej(pauza);
+    ukaz(uvod);
+  });
+
+  document.addEventListener("keydown", (udalost) => {
+    if (udalost.key !== "Escape") return;
+    // V hlavním menu Esc nic nedělá
+    if (!uvod.classList.contains("skryte")) return;
+
+    if (pauza.classList.contains("skryte")) {
+      ukaz(pauza);
+    } else {
+      schovej(pauza);
+    }
+  });
 </script>
 </body>
 </html>
