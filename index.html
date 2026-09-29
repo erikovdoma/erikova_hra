@@ -401,6 +401,7 @@
   <div id="hp" class="panel">
     <div>HP: <span id="hp-hodnota"></span></div>
     <div>Akce: <span id="akce-hodnota"></span></div>
+    <div>Kolo: <span id="kolo-hodnota"></span></div>
   </div>
 
   <div id="uvod" class="obrazovka">
@@ -496,9 +497,6 @@
     { nazev: "Zranění", hodnota: 1 },
   ];
 
-  document.getElementById("hp-hodnota").textContent =
-    VLASTNOSTI.find((vlastnost) => vlastnost.nazev === "Životy").hodnota;
-
   for (const seznam of document.querySelectorAll(".vlastnosti-seznam")) {
     for (const vlastnost of VLASTNOSTI) {
       const ramecek = document.createElement("div");
@@ -544,81 +542,105 @@
 
   postav(hrac, pozice);
 
-  // ---------- Monstrum ----------
+  // ---------- Zombíci ----------
+  // V každém kole je o jednoho zombíka víc. Když jsou všichni mrtví,
+  // hráč se vrátí doprostřed a začne další kolo.
 
   const MONSTRUM_ZIVOTY = 2;
   const MONSTRUM_KROKY = 2;
   const AKCE = VLASTNOSTI.find((vlastnost) => vlastnost.nazev === "Akce").hodnota;
+  const DOSTREL = VLASTNOSTI.find((vlastnost) => vlastnost.nazev === "Dostřel").hodnota;
+  const ZRANENI = VLASTNOSTI.find((vlastnost) => vlastnost.nazev === "Zranění").hodnota;
+  const ZIVOTY = VLASTNOSTI.find((vlastnost) => vlastnost.nazev === "Životy").hodnota;
 
-  const monstrum = document.createElement("div");
-  monstrum.className = "monstrum";
-  let monstrumZivoty = MONSTRUM_ZIVOTY;
-  monstrum.textContent = monstrumZivoty;
+  let zombici = [];
+  let kolo = 1;
+  let zbyvaAkci = AKCE;
+  let hrajeMonstrum = false;
+  let zivotyHrace = ZIVOTY;
 
-  // Monstrum se objeví na náhodném políčku aspoň 6 kroků od hráče
-  function nahodneMistoProMonstrum() {
+  const akceHodnota = document.getElementById("akce-hodnota");
+  const hpHodnota = document.getElementById("hp-hodnota");
+  const koloHodnota = document.getElementById("kolo-hodnota");
+  const smrt = document.getElementById("smrt");
+
+  function jeTamZombik(misto) {
+    return zombici.some((zombik) => stejneMisto(zombik.pozice, misto));
+  }
+
+  // Zombík se objeví na náhodném volném políčku aspoň 6 kroků od hráče
+  function nahodneMistoProZombika() {
     while (true) {
       const misto = {
         radek: Math.floor(Math.random() * VELIKOST),
         sloupec: Math.floor(Math.random() * VELIKOST),
       };
       const vzdalenost = Math.abs(misto.radek - pozice.radek) + Math.abs(misto.sloupec - pozice.sloupec);
-      if (vzdalenost >= 6) return misto;
+      if (vzdalenost >= 6 && !jeTamZombik(misto)) return misto;
     }
   }
 
-  const monstrumPozice = nahodneMistoProMonstrum();
-  postav(monstrum, monstrumPozice);
-
-  let zbyvaAkci = AKCE;
-  let hrajeMonstrum = false;
-  const akceHodnota = document.getElementById("akce-hodnota");
-  akceHodnota.textContent = zbyvaAkci;
-
-  // ---------- Střílení ----------
-
-  const DOSTREL = VLASTNOSTI.find((vlastnost) => vlastnost.nazev === "Dostřel").hodnota;
-  const ZRANENI = VLASTNOSTI.find((vlastnost) => vlastnost.nazev === "Zranění").hodnota;
-  let monstrumZije = true;
-
   // Střílet se dá jen rovně (stejný řádek nebo sloupec) a nejvýš na dostřel
-  function monstrumNaDostrel() {
-    if (!monstrumZije) return false;
-    const radky = Math.abs(pozice.radek - monstrumPozice.radek);
-    const sloupce = Math.abs(pozice.sloupec - monstrumPozice.sloupec);
+  function naDostrel(zombik) {
+    const radky = Math.abs(pozice.radek - zombik.pozice.radek);
+    const sloupce = Math.abs(pozice.sloupec - zombik.pozice.sloupec);
     return (radky === 0 && sloupce <= DOSTREL) || (sloupce === 0 && radky <= DOSTREL);
   }
 
   function ukazCil() {
-    monstrum.classList.toggle("na-dostrel", monstrumNaDostrel() && !hrajeMonstrum);
+    for (const zombik of zombici) {
+      zombik.prvek.classList.toggle("na-dostrel", naDostrel(zombik) && !hrajeMonstrum);
+    }
   }
 
-  ukazCil();
-
-  monstrum.addEventListener("click", () => {
-    if (!seHraje() || hrajeMonstrum || !monstrumNaDostrel()) return;
-    monstrumZivoty -= ZRANENI;
-    monstrum.textContent = monstrumZivoty;
-    if (monstrumZivoty <= 0) {
-      monstrumZije = false;
-      monstrum.remove();
+  function vystrel(zombik) {
+    if (!seHraje() || hrajeMonstrum || !naDostrel(zombik)) return;
+    zombik.zivoty -= ZRANENI;
+    zombik.prvek.textContent = zombik.zivoty;
+    if (zombik.zivoty <= 0) {
+      zombik.prvek.remove();
+      zombici = zombici.filter((jiny) => jiny !== zombik);
+      if (zombici.length === 0) {
+        zacniKolo(kolo + 1);
+        return;
+      }
     }
     pouzijAkci();
-  });
+  }
 
-  // ---------- Životy hráče ----------
+  function pridejZombika() {
+    const prvek = document.createElement("div");
+    prvek.className = "monstrum";
+    const zombik = { prvek, pozice: nahodneMistoProZombika(), zivoty: MONSTRUM_ZIVOTY };
+    prvek.textContent = zombik.zivoty;
+    prvek.addEventListener("click", () => vystrel(zombik));
+    zombici.push(zombik);
+    postav(prvek, zombik.pozice);
+  }
 
-  const ZIVOTY = VLASTNOSTI.find((vlastnost) => vlastnost.nazev === "Životy").hodnota;
-  let zivotyHrace = ZIVOTY;
-  const hpHodnota = document.getElementById("hp-hodnota");
-  const smrt = document.getElementById("smrt");
+  // Hráč jde doprostřed a objeví se tolik zombíků, kolikáté je kolo
+  function zacniKolo(cislo) {
+    kolo = cislo;
+    koloHodnota.textContent = kolo;
+    for (const zombik of zombici) zombik.prvek.remove();
+    zombici = [];
 
-  // Jedna akce monstra: když stojí vedle hráče, sekne ho. Jinak jde k němu,
-  // a to nejdřív ve směru, kde je hráč dál.
-  function krokMonstra() {
-    if (!monstrumZije) return;
-    const rozdilRadku = pozice.radek - monstrumPozice.radek;
-    const rozdilSloupcu = pozice.sloupec - monstrumPozice.sloupec;
+    pozice.radek = STRED;
+    pozice.sloupec = STRED;
+    postav(hrac, pozice);
+    for (let i = 0; i < kolo; i++) pridejZombika();
+
+    zbyvaAkci = AKCE;
+    akceHodnota.textContent = zbyvaAkci;
+    hrajeMonstrum = false;
+    ukazCil();
+  }
+
+  // Jedna akce zombíka: když stojí vedle hráče, sekne ho. Jinak jde k němu,
+  // a to nejdřív ve směru, kde je hráč dál. Na jiného zombíka nevstoupí.
+  function krokZombika(zombik) {
+    const rozdilRadku = pozice.radek - zombik.pozice.radek;
+    const rozdilSloupcu = pozice.sloupec - zombik.pozice.sloupec;
 
     if (Math.abs(rozdilRadku) + Math.abs(rozdilSloupcu) === 1) {
       zivotyHrace--;
@@ -634,22 +656,25 @@
 
     for (const krok of moznosti) {
       const kam = {
-        radek: monstrumPozice.radek + krok.radek,
-        sloupec: monstrumPozice.sloupec + krok.sloupec,
+        radek: zombik.pozice.radek + krok.radek,
+        sloupec: zombik.pozice.sloupec + krok.sloupec,
       };
-      if (stejneMisto(kam, pozice)) continue;
-      monstrumPozice.radek = kam.radek;
-      monstrumPozice.sloupec = kam.sloupec;
-      postav(monstrum, monstrumPozice);
+      if (stejneMisto(kam, pozice) || jeTamZombik(kam)) continue;
+      zombik.pozice = kam;
+      postav(zombik.prvek, kam);
       return;
     }
   }
 
+  // Všichni zombíci udělají krok, pak znovu, dokud nevyčerpají své kroky
   function tahMonstra() {
     hrajeMonstrum = true;
     let krok = 0;
     const casovac = setInterval(() => {
-      krokMonstra();
+      for (const zombik of zombici) {
+        krokZombika(zombik);
+        if (zivotyHrace <= 0) break;
+      }
       krok++;
       if (zivotyHrace <= 0) {
         clearInterval(casovac);
@@ -666,26 +691,15 @@
     }, 300);
   }
 
-  // Vrátí hráče, monstrum i akce na začátek
+  // Úplně nová hra: plné životy a zase 1. kolo s jedním zombíkem
   function novaHra() {
     zivotyHrace = ZIVOTY;
     hpHodnota.textContent = zivotyHrace;
-    pozice.radek = STRED;
-    pozice.sloupec = STRED;
-    postav(hrac, pozice);
-
-    monstrumZivoty = MONSTRUM_ZIVOTY;
-    monstrum.textContent = monstrumZivoty;
-    monstrumZije = true;
-    Object.assign(monstrumPozice, nahodneMistoProMonstrum());
-    postav(monstrum, monstrumPozice);
-
-    zbyvaAkci = AKCE;
-    akceHodnota.textContent = zbyvaAkci;
-    hrajeMonstrum = false;
-    ukazCil();
+    zacniKolo(1);
     schovej(smrt);
   }
+
+  novaHra();
 
   // Po smrti: připraví novou hru a vrátí hráče do hlavního menu
   document.getElementById("znovu").addEventListener("click", () => {
@@ -729,8 +743,8 @@
     };
     // Z mapy se vyjít nedá
     if (kam.radek < 0 || kam.radek >= VELIKOST || kam.sloupec < 0 || kam.sloupec >= VELIKOST) return;
-    // Na monstrum se vstoupit nedá
-    if (monstrumZije && stejneMisto(kam, monstrumPozice)) return;
+    // Na zombíka se vstoupit nedá
+    if (jeTamZombik(kam)) return;
     pozice.radek = kam.radek;
     pozice.sloupec = kam.sloupec;
     postav(hrac, pozice);
