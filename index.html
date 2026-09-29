@@ -98,6 +98,31 @@
     color: #ffe6c0;
   }
 
+  /* Vlastnosti v hlavním menu: menší rámečky vedle tlačítek */
+  .menu-radek {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .panel.menu-vlastnosti {
+    min-width: 0;
+  }
+
+  .menu-vlastnosti .vlastnosti-seznam {
+    display: grid;
+    grid-template-columns: repeat(2, 96px);
+  }
+
+  .menu-vlastnosti .vlastnost-nazev {
+    font-size: 15px;
+  }
+
+  .menu-vlastnosti .vlastnost-hodnota {
+    font-size: 36px;
+  }
+
   .policko {
     background: var(--drevo);
     cursor: pointer;
@@ -344,24 +369,7 @@
       <div class="panel">
         <p class="panel-nadpis">Vlastnosti</p>
         <p class="profil-radek">Profil: <span class="jmeno-hrace"></span></p>
-        <div class="panel-vnitrek">
-          <div class="vlastnost">
-            <span class="vlastnost-nazev">Životy</span>
-            <span class="vlastnost-hodnota" id="zivoty">1</span>
-          </div>
-          <div class="vlastnost">
-            <span class="vlastnost-nazev">Akce</span>
-            <span class="vlastnost-hodnota" id="akce">2</span>
-          </div>
-          <div class="vlastnost">
-            <span class="vlastnost-nazev">Dostřel</span>
-            <span class="vlastnost-hodnota" id="dostrel">3</span>
-          </div>
-          <div class="vlastnost">
-            <span class="vlastnost-nazev">Zranění</span>
-            <span class="vlastnost-hodnota" id="zraneni">1</span>
-          </div>
-        </div>
+        <div class="panel-vnitrek vlastnosti-seznam"></div>
       </div>
     </div>
   </div>
@@ -369,6 +377,7 @@
   <div id="uvod" class="obrazovka">
     <div>
       <p class="velky-nazev">Erikova hra</p>
+      <div class="menu-radek">
       <div class="panel">
         <p class="panel-nadpis">Hlavní menu</p>
         <p class="profil-radek">Profil: <span id="jmeno-profilu"></span></p>
@@ -382,6 +391,11 @@
           <p>Hra je otevřená v prohlížeči, ne jako program. Prohlížeč nedovolí, aby ji tlačítko Konec hry vypnulo.</p>
           <a class="tlacitko tlacitko-zelene" href="erikovahra://start">Spustit jako program</a>
         </div>
+      </div>
+      <div class="panel menu-vlastnosti">
+        <p class="panel-nadpis">Vlastnosti</p>
+        <div class="panel-vnitrek vlastnosti-seznam"></div>
+      </div>
       </div>
     </div>
   </div>
@@ -435,6 +449,29 @@
   const uvod = document.getElementById("uvod");
   const pauza = document.getElementById("pauza");
   const STRED = Math.floor(VELIKOST / 2);
+
+  // Vlastnosti hráče. Ukazují se v hlavním menu i vedle mapy.
+  const VLASTNOSTI = [
+    { nazev: "Životy", hodnota: 1 },
+    { nazev: "Akce", hodnota: 2 },
+    { nazev: "Dostřel", hodnota: 3 },
+    { nazev: "Zranění", hodnota: 1 },
+  ];
+
+  for (const seznam of document.querySelectorAll(".vlastnosti-seznam")) {
+    for (const vlastnost of VLASTNOSTI) {
+      const ramecek = document.createElement("div");
+      ramecek.className = "vlastnost";
+      const nazev = document.createElement("span");
+      nazev.className = "vlastnost-nazev";
+      nazev.textContent = vlastnost.nazev;
+      const hodnota = document.createElement("span");
+      hodnota.className = "vlastnost-hodnota";
+      hodnota.textContent = vlastnost.hodnota;
+      ramecek.append(nazev, hodnota);
+      seznam.appendChild(ramecek);
+    }
+  }
 
   for (let radek = 0; radek < VELIKOST; radek++) {
     for (let sloupec = 0; sloupec < VELIKOST; sloupec++) {
