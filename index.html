@@ -151,6 +151,13 @@
     font-size: 20px;
   }
 
+  /* Monstrum, na které se dá vystřelit */
+  .monstrum.na-dostrel {
+    cursor: crosshair;
+    outline: 3px solid #ffd000;
+    outline-offset: 1px;
+  }
+
   .policko.stred {
     background: #d62828;
   }
@@ -529,6 +536,7 @@
   const monstrum = document.createElement("div");
   monstrum.className = "monstrum";
   let monstrumZivoty = MONSTRUM_ZIVOTY;
+  monstrum.textContent = monstrumZivoty;
 
   // Monstrum se objeví na náhodném políčku aspoň 6 kroků od hráče
   function nahodneMistoProMonstrum() {
@@ -550,8 +558,40 @@
   const akceHodnota = document.getElementById("akce-hodnota");
   akceHodnota.textContent = zbyvaAkci;
 
+  // ---------- Střílení ----------
+
+  const DOSTREL = VLASTNOSTI.find((vlastnost) => vlastnost.nazev === "Dostřel").hodnota;
+  const ZRANENI = VLASTNOSTI.find((vlastnost) => vlastnost.nazev === "Zranění").hodnota;
+  let monstrumZije = true;
+
+  // Střílet se dá jen rovně (stejný řádek nebo sloupec) a nejvýš na dostřel
+  function monstrumNaDostrel() {
+    if (!monstrumZije) return false;
+    const radky = Math.abs(pozice.radek - monstrumPozice.radek);
+    const sloupce = Math.abs(pozice.sloupec - monstrumPozice.sloupec);
+    return (radky === 0 && sloupce <= DOSTREL) || (sloupce === 0 && radky <= DOSTREL);
+  }
+
+  function ukazCil() {
+    monstrum.classList.toggle("na-dostrel", monstrumNaDostrel() && !hrajeMonstrum);
+  }
+
+  ukazCil();
+
+  monstrum.addEventListener("click", () => {
+    if (!seHraje() || hrajeMonstrum || !monstrumNaDostrel()) return;
+    monstrumZivoty -= ZRANENI;
+    monstrum.textContent = monstrumZivoty;
+    if (monstrumZivoty <= 0) {
+      monstrumZije = false;
+      monstrum.remove();
+    }
+    pouzijAkci();
+  });
+
   // Jeden krok monstra směrem k hráči. Nejdřív zkusí směr, kde je hráč dál.
   function krokMonstra() {
+    if (!monstrumZije) return;
     const rozdilRadku = pozice.radek - monstrumPozice.radek;
     const rozdilSloupcu = pozice.sloupec - monstrumPozice.sloupec;
     const moznosti = [
@@ -584,6 +624,7 @@
         zbyvaAkci = AKCE;
         akceHodnota.textContent = zbyvaAkci;
         hrajeMonstrum = false;
+        ukazCil();
       }
     }, 300);
   }
@@ -605,6 +646,7 @@
     zbyvaAkci--;
     akceHodnota.textContent = zbyvaAkci;
     if (zbyvaAkci === 0) tahMonstra();
+    ukazCil();
   }
 
   // Mezerník: jedna akce se spotřebuje a hráč zůstane stát
@@ -624,7 +666,7 @@
     // Z mapy se vyjít nedá
     if (kam.radek < 0 || kam.radek >= VELIKOST || kam.sloupec < 0 || kam.sloupec >= VELIKOST) return;
     // Na monstrum se vstoupit nedá
-    if (stejneMisto(kam, monstrumPozice)) return;
+    if (monstrumZije && stejneMisto(kam, monstrumPozice)) return;
     pozice.radek = kam.radek;
     pozice.sloupec = kam.sloupec;
     postav(hrac, pozice);
