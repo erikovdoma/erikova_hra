@@ -181,6 +181,49 @@
     text-shadow: 0 4px 0 #000, 0 0 20px rgba(0, 0, 0, 0.8);
   }
 
+  #profily {
+    background:
+      radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0.7) 100%),
+      repeating-linear-gradient(45deg, #3a3631 0 24px, #35312c 24px 48px);
+  }
+
+  .profil-radek {
+    margin: 0 0 8px;
+    font-size: 15px;
+    color: #c8c0b0;
+  }
+
+  #jmeno-profilu {
+    font-weight: 700;
+    color: #ffe6c0;
+  }
+
+  .panel-nadpis-dalsi {
+    margin-top: 12px;
+  }
+
+  .prazdny-seznam {
+    margin: 0;
+    color: #a09a90;
+    text-align: center;
+  }
+
+  .policko-text {
+    font-family: inherit;
+    font-size: 17px;
+    padding: 6px 10px;
+    border: none;
+    border-radius: 2px;
+    color: #000;
+    background: #d8d8d8;
+    box-shadow: inset 0 2px 3px #5e5e5e, 0 0 0 1px #1a1a1a;
+  }
+
+  .policko-text:focus {
+    outline: none;
+    box-shadow: inset 0 2px 3px #5e5e5e, 0 0 0 2px #e39827;
+  }
+
   .upozorneni {
     max-width: 300px;
     margin-top: 12px;
@@ -227,14 +270,31 @@
       <p class="velky-nazev">Erikova hra</p>
       <div class="panel">
         <p class="panel-nadpis">Hlavní menu</p>
+        <p class="profil-radek">Profil: <span id="jmeno-profilu"></span></p>
         <div class="panel-vnitrek">
           <button id="hrat" class="tlacitko tlacitko-zelene">Hrát</button>
+          <button id="odejit" class="tlacitko tlacitko-cervene">Odejít z profilu</button>
           <button id="konec" class="tlacitko tlacitko-cervene">Konec hry</button>
         </div>
         <div id="upozorneni" class="upozorneni skryte">
           <p>Hra je otevřená v prohlížeči, ne jako program. Prohlížeč nedovolí, aby ji tlačítko Konec hry vypnulo.</p>
           <a class="tlacitko tlacitko-zelene" href="erikovahra://start">Spustit jako program</a>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="profily" class="obrazovka skryte">
+    <div>
+      <p class="velky-nazev">Erikova hra</p>
+      <div class="panel">
+        <p class="panel-nadpis">Vyber profil</p>
+        <div id="seznam-profilu" class="panel-vnitrek"></div>
+        <p class="panel-nadpis panel-nadpis-dalsi">Nový profil</p>
+        <form id="novy-profil" class="panel-vnitrek">
+          <input id="nove-jmeno" class="policko-text" maxlength="20" placeholder="Napiš jméno" autocomplete="off">
+          <button class="tlacitko tlacitko-zelene">Vytvořit profil</button>
+        </form>
       </div>
     </div>
   </div>
@@ -286,6 +346,86 @@
     schovej(uvod);
   });
 
+  // ---------- Profily ----------
+  // Seznam profilů a vybraný profil se pamatují v prohlížeči (localStorage).
+
+  const profily = document.getElementById("profily");
+  const seznamProfilu = document.getElementById("seznam-profilu");
+
+  function nacti(klic, vychozi) {
+    try {
+      const hodnota = localStorage.getItem(klic);
+      return hodnota === null ? vychozi : JSON.parse(hodnota);
+    } catch (e) {
+      return vychozi;
+    }
+  }
+
+  function uloz(klic, hodnota) {
+    try {
+      localStorage.setItem(klic, JSON.stringify(hodnota));
+    } catch (e) {}
+  }
+
+  let vsechnyProfily = nacti("profily", []);
+  let aktualniProfil = nacti("aktualniProfil", null);
+
+  function vyberProfil(jmeno) {
+    aktualniProfil = jmeno;
+    uloz("aktualniProfil", jmeno);
+    document.getElementById("jmeno-profilu").textContent = jmeno;
+    schovej(profily);
+    ukaz(uvod);
+  }
+
+  function ukazProfily() {
+    seznamProfilu.innerHTML = "";
+    if (vsechnyProfily.length === 0) {
+      const text = document.createElement("p");
+      text.className = "prazdny-seznam";
+      text.textContent = "Zatím tu není žádný profil";
+      seznamProfilu.appendChild(text);
+    }
+    for (const jmeno of vsechnyProfily) {
+      const tlacitko = document.createElement("button");
+      tlacitko.className = "tlacitko";
+      tlacitko.textContent = jmeno;
+      tlacitko.addEventListener("click", () => vyberProfil(jmeno));
+      seznamProfilu.appendChild(tlacitko);
+    }
+    schovej(uvod);
+    ukaz(profily);
+  }
+
+  document.getElementById("novy-profil").addEventListener("submit", (udalost) => {
+    udalost.preventDefault();
+    const pole = document.getElementById("nove-jmeno");
+    const jmeno = pole.value.trim();
+    if (!jmeno) {
+      pole.focus();
+      return;
+    }
+    if (!vsechnyProfily.includes(jmeno)) {
+      vsechnyProfily.push(jmeno);
+      uloz("profily", vsechnyProfily);
+    }
+    pole.value = "";
+    vyberProfil(jmeno);
+  });
+
+  document.getElementById("odejit").addEventListener("click", () => {
+    aktualniProfil = null;
+    uloz("aktualniProfil", null);
+    ukazProfily();
+  });
+
+  // Bez vybraného profilu se začíná výběrem profilu
+  if (aktualniProfil) {
+    document.getElementById("jmeno-profilu").textContent = aktualniProfil;
+  } else {
+    ukazProfily();
+  }
+
   // Ikona "Erikova hra" na ploše spouští hru s ?program=1 ve vlastním okně,
   // které jde zavřít. Běžná záložka prohlížeče (třeba Firefox) zavřít nejde.
   const JE_PROGRAM = new URLSearchParams(location.search).has("program");
@@ -321,8 +461,9 @@
 
   document.addEventListener("keydown", (udalost) => {
     if (udalost.key !== "Escape") return;
-    // V hlavním menu Esc nic nedělá
+    // V hlavním menu a ve výběru profilu Esc nic nedělá
     if (!uvod.classList.contains("skryte")) return;
+    if (!profily.classList.contains("skryte")) return;
 
     if (pauza.classList.contains("skryte")) {
       ukaz(pauza);
