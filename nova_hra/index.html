@@ -101,7 +101,7 @@
   scena.fog = new THREE.Fog(0x87ceeb, 30, 90);
 
   const kamera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.05, 200);
-  const vykreslovac = new THREE.WebGLRenderer({ antialias: false });
+  const vykreslovac = new THREE.WebGLRenderer({ antialias: true });
   vykreslovac.setPixelRatio(devicePixelRatio);
   vykreslovac.setSize(innerWidth, innerHeight);
   document.body.prepend(vykreslovac.domElement);
@@ -111,7 +111,7 @@
   slunce.position.set(10, 20, 6);
   scena.add(slunce);
 
-  // ---------- Kostičkové textury (kreslené po pixelech jako v Minecraftu) ----------
+  // ---------- Textury (hladké barvy) ----------
 
   function textura(kresli) {
     const platno = document.createElement("canvas");
@@ -124,23 +124,23 @@
       }
     }
     const t = new THREE.CanvasTexture(platno);
-    t.magFilter = THREE.NearestFilter;
-    t.minFilter = THREE.NearestFilter;
+    t.magFilter = THREE.LinearFilter;
+    t.minFilter = THREE.LinearFilter;
     return t;
   }
 
   function odstin(r, g, b, rozptyl) {
-    const s = (Math.random() - 0.5) * rozptyl;
+    const s = 0;   // hladké barvy, bez čtverečků
     return `rgb(${r + s | 0}, ${g + s | 0}, ${b + s | 0})`;
   }
 
   const trava = textura(() => odstin(95, 159, 53, 40));
   const hlina = textura(() => odstin(134, 96, 67, 40));
   const travaBok = textura((x, y) => {
-    const hranice = 3 + (Math.random() < 0.5 ? 1 : 0);
+    const hranice = 4;
     return y < hranice ? odstin(95, 159, 53, 40) : odstin(134, 96, 67, 40);
   });
-  const drevo = textura((x, y) => (x % 4 === 0 ? odstin(120, 88, 50, 20) : odstin(162, 124, 75, 25)));
+  const drevo = textura(() => odstin(162, 124, 75, 0));
 
   const materialTravy = [
     new THREE.MeshLambertMaterial({ map: travaBok }),
@@ -219,8 +219,8 @@
 
   // ---------- Stromy ----------
 
-  const kura = textura((x, y) => (x % 3 === 0 ? odstin(70, 52, 30, 20) : odstin(104, 80, 48, 25)));
-  const listi = textura(() => (Math.random() < 0.15 ? odstin(40, 90, 30, 20) : odstin(58, 128, 40, 40)));
+  const kura = textura(() => odstin(104, 80, 48, 0));
+  const listi = textura(() => odstin(58, 128, 40, 0));
   const materialKmene = new THREE.MeshLambertMaterial({ map: kura });
   const materialListi = new THREE.MeshLambertMaterial({ map: listi });
 
