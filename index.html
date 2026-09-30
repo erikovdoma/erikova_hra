@@ -687,11 +687,26 @@
     }
   }
 
-  // Střílet se dá jen rovně (stejný řádek nebo sloupec) a nejvýš na dostřel
+  // Políčka, přes která letí střela (bez startu a cíle), po přímce mezi nimi
+  function polickaMezi(odkud, kam) {
+    const kroky = Math.max(Math.abs(kam.radek - odkud.radek), Math.abs(kam.sloupec - odkud.sloupec));
+    const policka = [];
+    for (let i = 1; i < kroky; i++) {
+      policka.push({
+        radek: Math.round(odkud.radek + (kam.radek - odkud.radek) * i / kroky),
+        sloupec: Math.round(odkud.sloupec + (kam.sloupec - odkud.sloupec) * i / kroky),
+      });
+    }
+    return policka;
+  }
+
+  // Střílet se dá do čtverce kolem hráče (i šikmo), nejvýš na dostřel,
+  // a jen když v cestě nestojí jiný zombík
   function naDostrel(zombik) {
     const radky = Math.abs(pozice.radek - zombik.pozice.radek);
     const sloupce = Math.abs(pozice.sloupec - zombik.pozice.sloupec);
-    return (radky === 0 && sloupce <= DOSTREL) || (sloupce === 0 && radky <= DOSTREL);
+    if (Math.max(radky, sloupce) > DOSTREL) return false;
+    return !polickaMezi(pozice, zombik.pozice).some(jeTamZombik);
   }
 
   function ukazCil() {
