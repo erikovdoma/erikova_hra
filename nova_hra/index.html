@@ -90,7 +90,7 @@
 <script>
   // ---------- Svět ----------
 
-  const VELIKOST_OSTROVA = 12;   // plošinka má 12 × 12 kostiček
+  const VELIKOST_OSTROVA = 20;   // plošinka má 20 × 20 kostiček
   const VYSKA_OCI = 1.6;
   const RYCHLOST = 4.5;          // kostiček za sekundu
   const SILA_SKOKU = 7;
@@ -174,7 +174,7 @@
 
       // Vzdálenost od kraje určuje, jak hluboko ostrov pod tímto místem sahá
       const odKraje = Math.min(x, z, VELIKOST_OSTROVA - 1 - x, VELIKOST_OSTROVA - 1 - z);
-      const hloubka = 1 + odKraje + (Math.random() < 0.4 ? 1 : 0);
+      const hloubka = 1 + Math.min(odKraje, 7) + (Math.random() < 0.4 ? 1 : 0);
       for (let y = 1; y <= hloubka; y++) {
         pridejKostku(px, -0.5 - y, pz, materialHliny);
       }
@@ -215,6 +215,46 @@
     pridejLate(p, okraj, latX);
     pridejLate(-okraj, p, latZ);
     pridejLate(okraj, p, latZ);
+  }
+
+  // ---------- Stromy ----------
+
+  const kura = textura((x, y) => (x % 3 === 0 ? odstin(70, 52, 30, 20) : odstin(104, 80, 48, 25)));
+  const listi = textura(() => (Math.random() < 0.15 ? odstin(40, 90, 30, 20) : odstin(58, 128, 40, 40)));
+  const materialKmene = new THREE.MeshLambertMaterial({ map: kura });
+  const materialListi = new THREE.MeshLambertMaterial({ map: listi });
+
+  const stromy = [];   // místa kmenů, přes které se nedá projít
+
+  // Strom jako v Minecraftu: kmen z kostek a nahoře koruna z listí
+  function pridejStrom(x, z) {
+    const vyskaKmene = 4 + Math.floor(Math.random() * 2);
+    for (let y = 0; y < vyskaKmene; y++) pridejKostku(x, y + 0.5, z, materialKmene);
+
+    const vrsek = vyskaKmene;
+    for (let dy = -2; dy <= 1; dy++) {
+      const polomer = dy >= 0 ? 1 : 2;
+      for (let dx = -polomer; dx <= polomer; dx++) {
+        for (let dz = -polomer; dz <= polomer; dz++) {
+          if (dx === 0 && dz === 0 && dy < 0) continue;   // tam je kmen
+          // Rohy koruny občas chybí, ať strom není úplná kostka
+          const roh = Math.abs(dx) === polomer && Math.abs(dz) === polomer;
+          if (roh && (dy === 1 || Math.random() < 0.5)) continue;
+          pridejKostku(x + dx, vrsek + dy + 0.5, z + dz, materialListi);
+        }
+      }
+    }
+    stromy.push({ x, z });
+  }
+
+  // Stromy se rozmístí náhodně, ne moc blízko kraje, hráče ani sebe navzájem
+  const pocetStromu = 7;
+  for (let pokus = 0; stromy.length < pocetStromu && pokus < 500; pokus++) {
+    const x = Math.floor(Math.random() * (VELIKOST_OSTROVA - 6)) - polovina + 3.5;
+    const z = Math.floor(Math.random() * (VELIKOST_OSTROVA - 6)) - polovina + 3.5;
+    if (Math.hypot(x, z - 2) < 4) continue;
+    if (stromy.some((s) => Math.hypot(s.x - x, s.z - z) < 5)) continue;
+    pridejStrom(x, z);
   }
 
   // ---------- Mraky ----------
@@ -275,6 +315,17 @@
     const cos = Math.cos(otoceni);
     hrac.x += ((-sin * dopredu) + (cos * doboku)) / delka * RYCHLOST * dt;
     hrac.z += ((-cos * dopredu) - (sin * doboku)) / delka * RYCHLOST * dt;
+
+    // Kmenem stromu se nedá projít: hráče odsune ven z kmene
+    for (const strom of stromy) {
+      const dx = hrac.x - strom.x;
+      const dz = hrac.z - strom.z;
+      const presah = 0.5 + 0.3 - Math.max(Math.abs(dx), Math.abs(dz));
+      if (presah > 0 && hrac.y < 5) {
+        if (Math.abs(dx) > Math.abs(dz)) hrac.x += Math.sign(dx) * presah;
+        else hrac.z += Math.sign(dz) * presah;
+      }
+    }
 
     // Plot nepustí hráče z plošinky
     const hranice = okraj - 0.4;
