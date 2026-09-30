@@ -194,6 +194,29 @@
     font-size: 20px;
   }
 
+  .monstrum.zeleny {
+    background: #2e9e3e;
+    box-shadow: inset 0 -3px 0 #1b6526, 0 2px 4px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Výběr zombíka v editoru: vybraný má oranžový rámeček */
+  .vyber-zombika {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .vyber-zombika .monstrum {
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+  }
+
+  .vyber-zombika .monstrum.vybrany {
+    outline: 3px solid #e39827;
+    outline-offset: 2px;
+  }
+
   /* Monstrum, na které se dá vystřelit */
   .monstrum.na-dostrel {
     cursor: crosshair;
@@ -508,6 +531,10 @@
       <p class="panel-nadpis">Editor – kolo <span id="editor-kolo"></span></p>
       <button id="editor-zpet" class="tlacitko">Zpět do menu</button>
       <button id="editor-dalsi" class="tlacitko tlacitko-zelene">Další kolo</button>
+      <div class="vyber-zombika">
+        <div class="monstrum vybrany" data-typ="fialovy">2</div>
+        <div class="monstrum zeleny" data-typ="zeleny">3</div>
+      </div>
     </div>
     <div id="editor-mapa"></div>
   </div>
@@ -687,10 +714,24 @@
     pouzijAkci();
   }
 
-  function pridejZombika(misto = nahodneMistoProZombika()) {
+  // Druhy zombíků. Liší se jen barvou a počtem životů.
+  const TYPY_ZOMBIKU = {
+    fialovy: { zivoty: MONSTRUM_ZIVOTY, trida: "" },
+    zeleny: { zivoty: 3, trida: "zeleny" },
+  };
+
+  function vyrobPrvekZombika(typ) {
     const prvek = document.createElement("div");
     prvek.className = "monstrum";
-    const zombik = { prvek, pozice: { ...misto }, zivoty: MONSTRUM_ZIVOTY };
+    if (TYPY_ZOMBIKU[typ].trida) prvek.classList.add(TYPY_ZOMBIKU[typ].trida);
+    prvek.textContent = TYPY_ZOMBIKU[typ].zivoty;
+    return prvek;
+  }
+
+  function pridejZombika(misto = nahodneMistoProZombika()) {
+    const typ = misto.typ || "fialovy";
+    const prvek = vyrobPrvekZombika(typ);
+    const zombik = { prvek, pozice: { radek: misto.radek, sloupec: misto.sloupec }, zivoty: TYPY_ZOMBIKU[typ].zivoty };
     prvek.textContent = zombik.zivoty;
     prvek.addEventListener("click", () => vystrel(zombik));
     zombici.push(zombik);
@@ -858,22 +899,32 @@
     document.getElementById("editor-kolo").textContent = editorKolo;
     for (const policko of editorMapa.children) policko.innerHTML = "";
     for (const misto of editorZombici) {
-      const prvek = document.createElement("div");
-      prvek.className = "monstrum";
-      prvek.textContent = MONSTRUM_ZIVOTY;
+      const prvek = vyrobPrvekZombika(misto.typ || "fialovy");
       editorMapa.children[misto.radek * VELIKOST + misto.sloupec].appendChild(prvek);
     }
   }
 
-  // Klik přidá zombíka, další klik na stejné políčko ho zase odebere.
-  // Na prostřední políčko (tam začíná hráč) zombík dát nejde.
+  // Který zombík se bude klikat (vybírá se nahoře v editoru)
+  let vybranyTyp = "fialovy";
+
+  for (const volba of document.querySelectorAll(".vyber-zombika .monstrum")) {
+    volba.addEventListener("click", () => {
+      vybranyTyp = volba.dataset.typ;
+      for (const jina of document.querySelectorAll(".vyber-zombika .monstrum")) {
+        jina.classList.toggle("vybrany", jina === volba);
+      }
+    });
+  }
+
+  // Klik přidá vybraného zombíka, klik na stejného zombíka ho zase odebere,
+  // klik na jiného zombíka ho vymění. Na prostřední políčko (tam začíná hráč)
+  // zombík dát nejde.
   function prepniZombika(misto) {
     if (misto.radek === STRED && misto.sloupec === STRED) return;
-    const uzTamJe = editorZombici.some((jiny) => stejneMisto(jiny, misto));
-    if (uzTamJe) {
-      editorZombici = editorZombici.filter((jiny) => !stejneMisto(jiny, misto));
-    } else {
-      editorZombici.push(misto);
+    const tamJe = editorZombici.find((jiny) => stejneMisto(jiny, misto));
+    editorZombici = editorZombici.filter((jiny) => !stejneMisto(jiny, misto));
+    if (!tamJe || (tamJe.typ || "fialovy") !== vybranyTyp) {
+      editorZombici.push({ ...misto, typ: vybranyTyp });
     }
     vykresliEditor();
   }
