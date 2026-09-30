@@ -481,6 +481,7 @@
         <p class="panel-nadpis">Obchod</p>
         <div class="panel-vnitrek">
           <button id="koupit-akci" class="tlacitko tlacitko-zelene">+ Akce (<span id="cena-akce"></span> Kč)</button>
+          <button id="koupit-zivot" class="tlacitko tlacitko-zelene">+ Život (<span id="cena-zivotu"></span> Kč)</button>
         </div>
       </div>
       </div>
@@ -570,6 +571,13 @@
     return VLASTNOSTI.find((vlastnost) => vlastnost.nazev === "Akce").hodnota + bonusAkce;
   }
 
+  // Kolik životů navíc si profil koupil v obchodě
+  let bonusZivoty = 0;
+
+  function pocetZivotu() {
+    return VLASTNOSTI.find((vlastnost) => vlastnost.nazev === "Životy").hodnota + bonusZivoty;
+  }
+
   for (const seznam of document.querySelectorAll(".vlastnosti-seznam")) {
     for (const vlastnost of VLASTNOSTI) {
       const ramecek = document.createElement("div");
@@ -624,13 +632,12 @@
   const MONSTRUM_KROKY = 2;
   const DOSTREL = VLASTNOSTI.find((vlastnost) => vlastnost.nazev === "Dostřel").hodnota;
   const ZRANENI = VLASTNOSTI.find((vlastnost) => vlastnost.nazev === "Zranění").hodnota;
-  const ZIVOTY = VLASTNOSTI.find((vlastnost) => vlastnost.nazev === "Životy").hodnota;
 
   let zombici = [];
   let kolo = 1;
   let zbyvaAkci = pocetAkci();
   let hrajeMonstrum = false;
-  let zivotyHrace = ZIVOTY;
+  let zivotyHrace = pocetZivotu();
 
   const akceHodnota = document.getElementById("akce-hodnota");
   const hpHodnota = document.getElementById("hp-hodnota");
@@ -771,7 +778,7 @@
 
   // Úplně nová hra: plné životy a zase 1. kolo s jedním zombíkem
   function novaHra() {
-    zivotyHrace = ZIVOTY;
+    zivotyHrace = pocetZivotu();
     hpHodnota.textContent = zivotyHrace;
     zacniKolo(1);
     schovej(smrt);
@@ -956,18 +963,37 @@
 
   // ---------- Obchod ----------
   // "+ Akce" přidá akci navždycky. Cena: 50 Kč, pak 100, 200, 400...
+  // "+ Život" přidá život navždycky. Cena: 50 Kč, pak 100, 150, 200...
 
   const koupitAkci = document.getElementById("koupit-akci");
+  const koupitZivot = document.getElementById("koupit-zivot");
 
   function cenaAkce() {
     return 50 * 2 ** bonusAkce;
+  }
+
+  function cenaZivotu() {
+    return 50 * (bonusZivoty + 1);
   }
 
   function ukazObchod() {
     document.getElementById("cena-akce").textContent = cenaAkce();
     koupitAkci.disabled = penize < cenaAkce();
     document.querySelector('.menu-vlastnosti [data-nazev="Akce"]').textContent = pocetAkci();
+    document.getElementById("cena-zivotu").textContent = cenaZivotu();
+    koupitZivot.disabled = penize < cenaZivotu();
+    document.querySelector('.menu-vlastnosti [data-nazev="Životy"]').textContent = pocetZivotu();
   }
+
+  koupitZivot.addEventListener("click", () => {
+    if (penize < cenaZivotu()) return;
+    const cena = cenaZivotu();
+    bonusZivoty++;
+    uloz("zivoty:" + aktualniProfil, bonusZivoty);
+    zivotyHrace++;
+    hpHodnota.textContent = zivotyHrace;
+    pridejPenize(-cena);
+  });
 
   // Po nákupu nebo změně profilu platí nový počet akcí hned
   function doplnAkce() {
@@ -988,6 +1014,9 @@
   function nactiPenize() {
     penize = nacti("penize:" + aktualniProfil, 0);
     bonusAkce = nacti("akce:" + aktualniProfil, 0);
+    bonusZivoty = nacti("zivoty:" + aktualniProfil, 0);
+    zivotyHrace = pocetZivotu();
+    hpHodnota.textContent = zivotyHrace;
     ukazPenize();
     doplnAkce();
   }
@@ -1065,6 +1094,7 @@
     try {
       localStorage.removeItem("penize:" + aktualniProfil);
       localStorage.removeItem("akce:" + aktualniProfil);
+      localStorage.removeItem("zivoty:" + aktualniProfil);
     } catch (e) {}
     aktualniProfil = null;
     uloz("aktualniProfil", null);
