@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Erikova nová hra</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    background: #87ceeb;
+    font-family: "Titillium Web", sans-serif;
+  }
+
+  canvas {
+    display: block;
+  }
+
+  /* Zaměřovací křížek uprostřed obrazovky */
+  #krizek {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    pointer-events: none;
+  }
+
+  #krizek::before,
+  #krizek::after {
+    content: "";
+    position: absolute;
+    background: rgba(255, 255, 255, 0.9);
+  }
+
+  #krizek::before {
+    left: 9px;
+    width: 2px;
+    height: 20px;
+  }
+
+  #krizek::after {
+    top: 9px;
+    width: 20px;
+    height: 2px;
+  }
+
+  #start {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.45);
+    color: #fff;
+    cursor: pointer;
+    text-align: center;
+  }
+
+  #start h1 {
+    margin: 0 0 8px;
+    font-size: 56px;
+    text-shadow: 0 4px 0 #000;
+  }
+
+  #start p {
+    margin: 4px 0;
+    font-size: 20px;
+  }
+
+  .skryte {
+    display: none !important;
+  }
+</style>
+</head>
+<body>
+  <div id="krizek"></div>
+  <div id="start">
+    <h1>Erikova nová hra</h1>
+    <p><b>Klikni</b> a hraj</p>
+    <p>Myš = rozhlížení · WASD = chůze · Mezerník = skok · Esc = pauza</p>
+  </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+  // ---------- Svět ----------
+
+  const VELIKOST_OSTROVA = 12;   // plošinka má 12 × 12 kostiček
+  const VYSKA_OCI = 1.6;
+  const RYCHLOST = 4.5;          // kostiček za sekundu
+  const SILA_SKOKU = 7;
+  const GRAVITACE = 20;
+
+  const scena = new THREE.Scene();
+  scena.background = new THREE.Color(0x87ceeb);
+  scena.fog = new THREE.Fog(0x87ceeb, 30, 90);
+
+  const kamera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.05, 200);
+  const vykreslovac = new THREE.WebGLRenderer({ antialias: false });
+  vykreslovac.setPixelRatio(devicePixelRatio);
+  vykreslovac.setSize(innerWidth, innerHeight);
+  document.body.prepend(vykreslovac.domElement);
+
+  scena.add(new THREE.HemisphereLight(0xffffff, 0x556644, 0.75));
+  const slunce = new THREE.DirectionalLight(0xffffff, 0.6);
+  slunce.position.set(10, 20, 6);
+  scena.add(slunce);
+
+  // ---------- Kostičkové textury (kreslené po pixelech jako v Minecraftu) ----------
+
+  function textura(kresli) {
+    const platno = document.createElement("canvas");
+    platno.width = platno.height = 16;
+    const ctx = platno.getContext("2d");
+    for (let x = 0; x < 16; x++) {
+      for (let y = 0; y < 16; y++) {
+        ctx.fillStyle = kresli(x, y);
+        ctx.fillRect(x, y, 1, 1);
+      }
+    }
+    const t = new THREE.CanvasTexture(platno);
+    t.magFilter = THREE.NearestFilter;
+    t.minFilter = THREE.NearestFilter;
+    return t;
+  }
+
+  function odstin(r, g, b, rozptyl) {
+    const s = (Math.random() - 0.5) * rozptyl;
+    return `rgb(${r + s | 0}, ${g + s | 0}, ${b + s | 0})`;
+  }
+
+  const trava = textura(() => odstin(95, 159, 53, 40));
+  const hlina = textura(() => odstin(134, 96, 67, 40));
+  const travaBok = textura((x, y) => {
+    const hranice = 3 + (Math.random() < 0.5 ? 1 : 0);
+    return y < hranice ? odstin(95, 159, 53, 40) : odstin(134, 96, 67, 40);
+  });
+  const drevo = textura((x, y) => (x % 4 === 0 ? odstin(120, 88, 50, 20) : odstin(162, 124, 75, 25)));
+
+  const materialTravy = [
+    new THREE.MeshLambertMaterial({ map: travaBok }),
+    new THREE.MeshLambertMaterial({ map: travaBok }),
+    new THREE.MeshLambertMaterial({ map: trava }),
+    new THREE.MeshLambertMaterial({ map: hlina }),
+    new THREE.MeshLambertMaterial({ map: travaBok }),
+    new THREE.MeshLambertMaterial({ map: travaBok }),
+  ];
+  const materialHliny = new THREE.MeshLambertMaterial({ map: hlina });
+  const materialDreva = new THREE.MeshLambertMaterial({ map: drevo });
+
+  const kostka = new THREE.BoxGeometry(1, 1, 1);
+
+  function pridejKostku(x, y, z, material) {
+    const blok = new THREE.Mesh(kostka, material);
+    blok.position.set(x, y, z);
+    scena.add(blok);
+  }
+
+  // ---------- Lítací plošinka ----------
+  // Nahoře tráva, pod ní hlína, a čím níž, tím je ostrov užší (jako kus země ve vzduchu).
+
+  const polovina = VELIKOST_OSTROVA / 2;
+
+  for (let x = 0; x < VELIKOST_OSTROVA; x++) {
+    for (let z = 0; z < VELIKOST_OSTROVA; z++) {
+      const px = x - polovina + 0.5;
+      const pz = z - polovina + 0.5;
+      pridejKostku(px, -0.5, pz, materialTravy);
+
+      // Vzdálenost od kraje určuje, jak hluboko ostrov pod tímto místem sahá
+      const odKraje = Math.min(x, z, VELIKOST_OSTROVA - 1 - x, VELIKOST_OSTROVA - 1 - z);
+      const hloubka = 1 + odKraje + (Math.random() < 0.4 ? 1 : 0);
+      for (let y = 1; y <= hloubka; y++) {
+        pridejKostku(px, -0.5 - y, pz, materialHliny);
+      }
+    }
+  }
+
+  // ---------- Plot dokola ----------
+
+  const sloupek = new THREE.BoxGeometry(0.25, 1.4, 0.25);
+  const latX = new THREE.BoxGeometry(1, 0.15, 0.12);
+  const latZ = new THREE.BoxGeometry(0.12, 0.15, 1);
+
+  function pridejSloupek(x, z) {
+    const s = new THREE.Mesh(sloupek, materialDreva);
+    s.position.set(x, 0.7, z);
+    scena.add(s);
+  }
+
+  function pridejLate(x, z, geometrie) {
+    for (const vyska of [0.45, 1.05]) {
+      const lat = new THREE.Mesh(geometrie, materialDreva);
+      lat.position.set(x, vyska, z);
+      scena.add(lat);
+    }
+  }
+
+  const okraj = polovina - 0.15;   // plot stojí kousek od kraje plošinky
+  for (let i = 0; i <= VELIKOST_OSTROVA; i++) {
+    const p = Math.max(-okraj, Math.min(okraj, i - polovina));
+    pridejSloupek(p, -okraj);
+    pridejSloupek(p, okraj);
+    pridejSloupek(-okraj, p);
+    pridejSloupek(okraj, p);
+  }
+  for (let i = 0; i < VELIKOST_OSTROVA; i++) {
+    const p = i - polovina + 0.5;
+    pridejLate(p, -okraj, latX);
+    pridejLate(p, okraj, latX);
+    pridejLate(-okraj, p, latZ);
+    pridejLate(okraj, p, latZ);
+  }
+
+  // ---------- Mraky ----------
+
+  const materialMraku = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 });
+  const mraky = [];
+  for (let i = 0; i < 18; i++) {
+    const mrak = new THREE.Mesh(
+      new THREE.BoxGeometry(4 + Math.random() * 8, 1, 3 + Math.random() * 6),
+      materialMraku);
+    const uhel = Math.random() * Math.PI * 2;
+    const vzdalenost = 18 + Math.random() * 45;
+    mrak.position.set(Math.cos(uhel) * vzdalenost, -8 + Math.random() * 24, Math.sin(uhel) * vzdalenost);
+    scena.add(mrak);
+    mraky.push(mrak);
+  }
+
+  // ---------- Hráč ----------
+
+  const hrac = { x: 0, y: 0, z: 2, rychlostY: 0, naZemi: true };
+  let otoceni = Math.PI;   // doleva/doprava
+  let naklon = -0.15;      // nahoru/dolů
+  const drzeneKlavesy = {};
+
+  const start = document.getElementById("start");
+  start.addEventListener("click", () => vykreslovac.domElement.requestPointerLock());
+
+  document.addEventListener("pointerlockchange", () => {
+    start.classList.toggle("skryte", document.pointerLockElement === vykreslovac.domElement);
+  });
+
+  document.addEventListener("mousemove", (e) => {
+    if (document.pointerLockElement !== vykreslovac.domElement) return;
+    otoceni -= e.movementX * 0.0025;
+    naklon -= e.movementY * 0.0025;
+    naklon = Math.max(-1.5, Math.min(1.5, naklon));
+  });
+
+  document.addEventListener("keydown", (e) => {
+    drzeneKlavesy[e.code] = true;
+    if (e.code === "Space" && hrac.naZemi) {
+      hrac.rychlostY = SILA_SKOKU;
+      hrac.naZemi = false;
+    }
+  });
+  document.addEventListener("keyup", (e) => { drzeneKlavesy[e.code] = false; });
+
+  function pohniHracem(dt) {
+    let dopredu = 0;
+    let doboku = 0;
+    if (drzeneKlavesy.KeyW) dopredu += 1;
+    if (drzeneKlavesy.KeyS) dopredu -= 1;
+    if (drzeneKlavesy.KeyD) doboku += 1;
+    if (drzeneKlavesy.KeyA) doboku -= 1;
+
+    const delka = Math.hypot(dopredu, doboku) || 1;
+    const sin = Math.sin(otoceni);
+    const cos = Math.cos(otoceni);
+    hrac.x += ((-sin * dopredu) + (cos * doboku)) / delka * RYCHLOST * dt;
+    hrac.z += ((-cos * dopredu) - (sin * doboku)) / delka * RYCHLOST * dt;
+
+    // Plot nepustí hráče z plošinky
+    const hranice = okraj - 0.4;
+    hrac.x = Math.max(-hranice, Math.min(hranice, hrac.x));
+    hrac.z = Math.max(-hranice, Math.min(hranice, hrac.z));
+
+    hrac.rychlostY -= GRAVITACE * dt;
+    hrac.y += hrac.rychlostY * dt;
+    if (hrac.y <= 0) {
+      hrac.y = 0;
+      hrac.rychlostY = 0;
+      hrac.naZemi = true;
+    }
+  }
+
+  // ---------- Hlavní smyčka ----------
+
+  let minule = performance.now();
+
+  function snimek(ted) {
+    const dt = Math.min((ted - minule) / 1000, 0.05);
+    minule = ted;
+
+    if (document.pointerLockElement === vykreslovac.domElement) pohniHracem(dt);
+
+    for (const mrak of mraky) {
+      mrak.position.x += dt * 0.6;
+      if (mrak.position.x > 70) mrak.position.x = -70;
+    }
+
+    kamera.position.set(hrac.x, hrac.y + VYSKA_OCI, hrac.z);
+    kamera.rotation.set(naklon, otoceni, 0, "YXZ");
+    vykreslovac.render(scena, kamera);
+    requestAnimationFrame(snimek);
+  }
+
+  requestAnimationFrame(snimek);
+
+  addEventListener("resize", () => {
+    kamera.aspect = innerWidth / innerHeight;
+    kamera.updateProjectionMatrix();
+    vykreslovac.setSize(innerWidth, innerHeight);
+  });
+</script>
+</body>
+</html>
