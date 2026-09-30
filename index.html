@@ -194,9 +194,9 @@
     font-size: 20px;
   }
 
-  .monstrum.zeleny {
-    background: #2e9e3e;
-    box-shadow: inset 0 -3px 0 #1b6526, 0 2px 4px rgba(0, 0, 0, 0.5);
+  .monstrum.cerveny {
+    background: #c62828;
+    box-shadow: inset 0 -3px 0 #7f1414, 0 2px 4px rgba(0, 0, 0, 0.5);
   }
 
   /* Výběr zombíka v editoru: vybraný má oranžový rámeček */
@@ -533,7 +533,7 @@
       <button id="editor-dalsi" class="tlacitko tlacitko-zelene">Další kolo</button>
       <div class="vyber-zombika">
         <div class="monstrum vybrany" data-typ="fialovy">2</div>
-        <div class="monstrum zeleny" data-typ="zeleny">3</div>
+        <div class="monstrum cerveny" data-typ="cerveny">3</div>
       </div>
     </div>
     <div id="editor-mapa"></div>
@@ -717,7 +717,9 @@
   // Druhy zombíků. Liší se jen barvou a počtem životů.
   const TYPY_ZOMBIKU = {
     fialovy: { zivoty: MONSTRUM_ZIVOTY, trida: "" },
-    zeleny: { zivoty: 3, trida: "zeleny" },
+    cerveny: { zivoty: 3, trida: "cerveny" },
+    // Starší naklikaná kola mají ještě název "zeleny"
+    zeleny: { zivoty: 3, trida: "cerveny" },
   };
 
   function vyrobPrvekZombika(typ) {
