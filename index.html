@@ -31,7 +31,8 @@
     font-size: 24px;
   }
 
-  #mapa {
+  #mapa,
+  #editor-mapa {
     display: grid;
     /* Všechny řádky i sloupce stejně velké, ať jsou políčka čtverečky */
     grid-template-columns: repeat(var(--velikost), minmax(0, 1fr));
@@ -46,6 +47,33 @@
     box-sizing: border-box;
     width: min(97vw, calc(100vh - 70px));
     aspect-ratio: 1;
+  }
+
+  /* ---------- Editor kol ---------- */
+
+  #editor {
+    flex-direction: column;
+    gap: 8px;
+    background: #2e2a24;
+  }
+
+  #editor .panel {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 12px;
+  }
+
+  #editor .panel-nadpis {
+    margin: 0;
+  }
+
+  #editor-mapa {
+    width: min(97vw, calc(100vh - 90px));
+  }
+
+  #editor-mapa .policko:not(.stred):hover {
+    background: #b58cd0;
   }
 
   .tlacitko:disabled {
@@ -429,6 +457,7 @@
         <p class="profil-radek">Profil: <span id="jmeno-profilu"></span></p>
         <div class="panel-vnitrek">
           <button id="hrat" class="tlacitko tlacitko-zelene">Hrát</button>
+          <button id="otevrit-editor" class="tlacitko">Editor</button>
           <button id="odejit" class="tlacitko tlacitko-cervene">Odejít z profilu</button>
           <button id="zrusit" class="tlacitko tlacitko-cervene">Zrušit profil</button>
           <button id="konec" class="tlacitko tlacitko-cervene">Konec hry</button>
@@ -471,6 +500,15 @@
         </form>
       </div>
     </div>
+  </div>
+
+  <div id="editor" class="obrazovka skryte">
+    <div class="panel">
+      <p class="panel-nadpis">Editor – kolo <span id="editor-kolo"></span></p>
+      <button id="editor-zpet" class="tlacitko">Zpět do menu</button>
+      <button id="editor-dalsi" class="tlacitko tlacitko-zelene">Další kolo</button>
+    </div>
+    <div id="editor-mapa"></div>
   </div>
 
   <div id="potvrzeni" class="obrazovka skryte">
@@ -642,17 +680,18 @@
     pouzijAkci();
   }
 
-  function pridejZombika() {
+  function pridejZombika(misto = nahodneMistoProZombika()) {
     const prvek = document.createElement("div");
     prvek.className = "monstrum";
-    const zombik = { prvek, pozice: nahodneMistoProZombika(), zivoty: MONSTRUM_ZIVOTY };
+    const zombik = { prvek, pozice: { ...misto }, zivoty: MONSTRUM_ZIVOTY };
     prvek.textContent = zombik.zivoty;
     prvek.addEventListener("click", () => vystrel(zombik));
     zombici.push(zombik);
     postav(prvek, zombik.pozice);
   }
 
-  // Hráč jde doprostřed a objeví se tolik zombíků, kolikáté je kolo
+  // Hráč jde doprostřed. Zombíci jsou tam, kde je Erik naklikal v editoru,
+  // a když kolo naklikané není, objeví se jich náhodně tolik, kolikáté je kolo.
   function zacniKolo(cislo, doplnitAkce = true) {
     kolo = cislo;
     koloHodnota.textContent = kolo;
@@ -662,7 +701,12 @@
     pozice.radek = STRED;
     pozice.sloupec = STRED;
     postav(hrac, pozice);
-    for (let i = 0; i < kolo; i++) pridejZombika();
+    const naklikane = nacti("kola", [])[kolo - 1];
+    if (naklikane && naklikane.length > 0) {
+      for (const misto of naklikane) pridejZombika(misto);
+    } else {
+      for (let i = 0; i < kolo; i++) pridejZombika();
+    }
 
     if (doplnitAkce) zbyvaAkci = pocetAkci();
     akceHodnota.textContent = zbyvaAkci;
@@ -750,7 +794,7 @@
   };
 
   function seHraje() {
-    return [uvod, profily, pauza, potvrzeni, smrt].every((obrazovka) =>
+    return [uvod, profily, pauza, potvrzeni, smrt, editor].every((obrazovka) =>
       obrazovka.classList.contains("skryte"));
   }
 
@@ -783,6 +827,78 @@
     pozice.sloupec = kam.sloupec;
     postav(hrac, pozice);
     pouzijAkci();
+  });
+
+  // ---------- Editor kol ----------
+  // Kola se ukládají jako seznam míst se zombíky: kola[0] je 1. kolo atd.
+
+  const editor = document.getElementById("editor");
+  const editorMapa = document.getElementById("editor-mapa");
+  let editorKolo = 1;
+  let editorZombici = [];
+
+  for (let radek = 0; radek < VELIKOST; radek++) {
+    for (let sloupec = 0; sloupec < VELIKOST; sloupec++) {
+      const policko = document.createElement("div");
+      policko.className = "policko";
+      if (radek === STRED && sloupec === STRED) policko.classList.add("stred");
+      policko.addEventListener("click", () => prepniZombika({ radek, sloupec }));
+      editorMapa.appendChild(policko);
+    }
+  }
+
+  function vykresliEditor() {
+    document.getElementById("editor-kolo").textContent = editorKolo;
+    for (const policko of editorMapa.children) policko.innerHTML = "";
+    for (const misto of editorZombici) {
+      const prvek = document.createElement("div");
+      prvek.className = "monstrum";
+      prvek.textContent = MONSTRUM_ZIVOTY;
+      editorMapa.children[misto.radek * VELIKOST + misto.sloupec].appendChild(prvek);
+    }
+  }
+
+  // Klik přidá zombíka, další klik na stejné políčko ho zase odebere.
+  // Na prostřední políčko (tam začíná hráč) zombík dát nejde.
+  function prepniZombika(misto) {
+    if (misto.radek === STRED && misto.sloupec === STRED) return;
+    const uzTamJe = editorZombici.some((jiny) => stejneMisto(jiny, misto));
+    if (uzTamJe) {
+      editorZombici = editorZombici.filter((jiny) => !stejneMisto(jiny, misto));
+    } else {
+      editorZombici.push(misto);
+    }
+    vykresliEditor();
+  }
+
+  function nactiKoloDoEditoru(cislo) {
+    editorKolo = cislo;
+    editorZombici = (nacti("kola", [])[cislo - 1] || []).map((misto) => ({ ...misto }));
+    vykresliEditor();
+  }
+
+  function ulozKoloZEditoru() {
+    const kola = nacti("kola", []);
+    kola[editorKolo - 1] = editorZombici;
+    uloz("kola", kola);
+  }
+
+  document.getElementById("otevrit-editor").addEventListener("click", () => {
+    nactiKoloDoEditoru(1);
+    schovej(uvod);
+    ukaz(editor);
+  });
+
+  document.getElementById("editor-dalsi").addEventListener("click", () => {
+    ulozKoloZEditoru();
+    nactiKoloDoEditoru(editorKolo + 1);
+  });
+
+  document.getElementById("editor-zpet").addEventListener("click", () => {
+    ulozKoloZEditoru();
+    novaHra();
+    schovej(editor);
+    ukaz(uvod);
   });
 
   function ukaz(obrazovka) {
@@ -1004,6 +1120,7 @@
     if (!uvod.classList.contains("skryte")) return;
     if (!profily.classList.contains("skryte")) return;
     if (!smrt.classList.contains("skryte")) return;
+    if (!editor.classList.contains("skryte")) return;
 
     if (pauza.classList.contains("skryte")) {
       ukaz(pauza);
