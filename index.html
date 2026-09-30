@@ -720,7 +720,7 @@
     zombik.zivoty -= ZRANENI;
     zombik.prvek.textContent = zombik.zivoty;
     if (zombik.zivoty <= 0) {
-      pridejPenize(1);
+      pridejPenize(TYPY_ZOMBIKU[zombik.typ].odmena);
       zombik.prvek.remove();
       zombici = zombici.filter((jiny) => jiny !== zombik);
       // Další kolo akce nedoplní, výstřel se zaplatí až v něm
@@ -729,12 +729,12 @@
     pouzijAkci();
   }
 
-  // Druhy zombíků. Liší se jen barvou a počtem životů.
+  // Druhy zombíků. Liší se barvou, počtem životů a kolik korun za ně je.
   const TYPY_ZOMBIKU = {
-    fialovy: { zivoty: MONSTRUM_ZIVOTY, trida: "" },
-    cerveny: { zivoty: 3, trida: "cerveny" },
+    fialovy: { zivoty: MONSTRUM_ZIVOTY, trida: "", odmena: 1 },
+    cerveny: { zivoty: 3, trida: "cerveny", odmena: 2 },
     // Starší naklikaná kola mají ještě název "zeleny"
-    zeleny: { zivoty: 3, trida: "cerveny" },
+    zeleny: { zivoty: 3, trida: "cerveny", odmena: 2 },
   };
 
   function vyrobPrvekZombika(typ) {
@@ -748,7 +748,7 @@
   function pridejZombika(misto = nahodneMistoProZombika()) {
     const typ = misto.typ || "fialovy";
     const prvek = vyrobPrvekZombika(typ);
-    const zombik = { prvek, pozice: { radek: misto.radek, sloupec: misto.sloupec }, zivoty: TYPY_ZOMBIKU[typ].zivoty };
+    const zombik = { prvek, typ, pozice: { radek: misto.radek, sloupec: misto.sloupec }, zivoty: TYPY_ZOMBIKU[typ].zivoty };
     prvek.textContent = zombik.zivoty;
     prvek.addEventListener("click", () => vystrel(zombik));
     zombici.push(zombik);
