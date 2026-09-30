@@ -148,23 +148,22 @@
   const materialDreva = material(0xa27c4b);
   const POLOMER_PLOTU = POLOMER_OSTROVA - 0.4;
   const POCET_SLOUPKU = 56;
-  const sloupek = new THREE.CylinderGeometry(0.1, 0.12, 1.3, 12);
+  const sloupek = new THREE.BoxGeometry(0.22, 1.3, 0.22);
 
   const sloupky = [];
   for (let i = 0; i < POCET_SLOUPKU; i++) {
     const uhel = (i / POCET_SLOUPKU) * Math.PI * 2;
     const x = Math.cos(uhel) * POLOMER_PLOTU;
     const z = Math.sin(uhel) * POLOMER_PLOTU;
-    pridej(sloupek, materialDreva, x, 0.65, z);
+    pridej(sloupek, materialDreva, x, 0.65, z).rotation.y = -uhel;
     sloupky.push(new THREE.Vector3(x, 0, z));
   }
 
-  // Dvě kulatá bidla mezi každými dvěma sloupky
+  // Dvě plochá prkna mezi každými dvěma sloupky
   for (let i = 0; i < POCET_SLOUPKU; i++) {
     const a = sloupky[i];
     const b = sloupky[(i + 1) % POCET_SLOUPKU];
-    const bidlo = new THREE.CylinderGeometry(0.06, 0.06, a.distanceTo(b), 8);
-    bidlo.rotateX(Math.PI / 2);
+    const bidlo = new THREE.BoxGeometry(0.08, 0.18, a.distanceTo(b) + 0.1);
     for (const vyska of [0.45, 1.0]) {
       const kus = pridej(bidlo, materialDreva, (a.x + b.x) / 2, vyska, (a.z + b.z) / 2);
       kus.lookAt(b.x, vyska, b.z);
