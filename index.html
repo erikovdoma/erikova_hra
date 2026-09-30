@@ -636,10 +636,8 @@
       pridejPenize(1);
       zombik.prvek.remove();
       zombici = zombici.filter((jiny) => jiny !== zombik);
-      if (zombici.length === 0) {
-        zacniKolo(kolo + 1);
-        return;
-      }
+      // Další kolo akce nedoplní, výstřel se zaplatí až v něm
+      if (zombici.length === 0) zacniKolo(kolo + 1, false);
     }
     pouzijAkci();
   }
@@ -655,7 +653,7 @@
   }
 
   // Hráč jde doprostřed a objeví se tolik zombíků, kolikáté je kolo
-  function zacniKolo(cislo) {
+  function zacniKolo(cislo, doplnitAkce = true) {
     kolo = cislo;
     koloHodnota.textContent = kolo;
     for (const zombik of zombici) zombik.prvek.remove();
@@ -666,7 +664,7 @@
     postav(hrac, pozice);
     for (let i = 0; i < kolo; i++) pridejZombika();
 
-    zbyvaAkci = pocetAkci();
+    if (doplnitAkce) zbyvaAkci = pocetAkci();
     akceHodnota.textContent = zbyvaAkci;
     hrajeMonstrum = false;
     ukazCil();
@@ -853,7 +851,10 @@
     document.getElementById("cena-akce").textContent = cenaAkce();
     koupitAkci.disabled = penize < cenaAkce();
     document.querySelector('.menu-vlastnosti [data-nazev="Akce"]').textContent = pocetAkci();
-    // Obchod je v menu, takže nová hodnota platí hned pro další tah
+  }
+
+  // Po nákupu nebo změně profilu platí nový počet akcí hned
+  function doplnAkce() {
     zbyvaAkci = pocetAkci();
     akceHodnota.textContent = zbyvaAkci;
   }
@@ -864,6 +865,7 @@
     bonusAkce++;
     uloz("akce:" + aktualniProfil, bonusAkce);
     pridejPenize(-cena);
+    doplnAkce();
   });
 
   // Načte peníze a koupené věci vybraného profilu
@@ -871,6 +873,7 @@
     penize = nacti("penize:" + aktualniProfil, 0);
     bonusAkce = nacti("akce:" + aktualniProfil, 0);
     ukazPenize();
+    doplnAkce();
   }
 
   function pridejPenize(kolik) {
