@@ -48,14 +48,7 @@
     aspect-ratio: 1;
   }
 
-  #plus-akce {
-    position: fixed;
-    top: 60px;
-    left: 12px;
-    z-index: 5;
-  }
-
-  #plus-akce:disabled {
+  .tlacitko:disabled {
     filter: grayscale(1) brightness(0.7);
     cursor: default;
   }
@@ -420,7 +413,6 @@
 <body>
   <h1>Erikova hra</h1>
   <div id="mapa"></div>
-  <button id="plus-akce" class="tlacitko tlacitko-zelene" disabled>+ Akce (1 Kč)</button>
   <div id="hp" class="panel">
     <div>HP: <span id="hp-hodnota"></span></div>
     <div>Akce: <span id="akce-hodnota"></span></div>
@@ -454,6 +446,12 @@
           <div class="vlastnost penize-ramecek">
             <span class="vlastnost-hodnota"><span class="penize-hodnota"></span> Kč</span>
           </div>
+        </div>
+      </div>
+      <div class="panel">
+        <p class="panel-nadpis">Obchod</p>
+        <div class="panel-vnitrek">
+          <button id="koupit-akci" class="tlacitko tlacitko-zelene">+ Akce (<span id="cena-akce"></span> Kč)</button>
         </div>
       </div>
       </div>
@@ -527,6 +525,13 @@
     { nazev: "Zranění", hodnota: 1 },
   ];
 
+  // Kolik akcí navíc si profil koupil v obchodě (načte se s profilem)
+  let bonusAkce = 0;
+
+  function pocetAkci() {
+    return VLASTNOSTI.find((vlastnost) => vlastnost.nazev === "Akce").hodnota + bonusAkce;
+  }
+
   for (const seznam of document.querySelectorAll(".vlastnosti-seznam")) {
     for (const vlastnost of VLASTNOSTI) {
       const ramecek = document.createElement("div");
@@ -536,6 +541,7 @@
       nazev.textContent = vlastnost.nazev;
       const hodnota = document.createElement("span");
       hodnota.className = "vlastnost-hodnota";
+      hodnota.dataset.nazev = vlastnost.nazev;
       hodnota.textContent = vlastnost.hodnota;
       ramecek.append(nazev, hodnota);
       seznam.appendChild(ramecek);
@@ -578,14 +584,13 @@
 
   const MONSTRUM_ZIVOTY = 2;
   const MONSTRUM_KROKY = 2;
-  const AKCE = VLASTNOSTI.find((vlastnost) => vlastnost.nazev === "Akce").hodnota;
   const DOSTREL = VLASTNOSTI.find((vlastnost) => vlastnost.nazev === "Dostřel").hodnota;
   const ZRANENI = VLASTNOSTI.find((vlastnost) => vlastnost.nazev === "Zranění").hodnota;
   const ZIVOTY = VLASTNOSTI.find((vlastnost) => vlastnost.nazev === "Životy").hodnota;
 
   let zombici = [];
   let kolo = 1;
-  let zbyvaAkci = AKCE;
+  let zbyvaAkci = pocetAkci();
   let hrajeMonstrum = false;
   let zivotyHrace = ZIVOTY;
 
@@ -661,7 +666,7 @@
     postav(hrac, pozice);
     for (let i = 0; i < kolo; i++) pridejZombika();
 
-    zbyvaAkci = AKCE;
+    zbyvaAkci = pocetAkci();
     akceHodnota.textContent = zbyvaAkci;
     hrajeMonstrum = false;
     ukazCil();
@@ -714,7 +719,7 @@
       }
       if (krok >= MONSTRUM_KROKY) {
         clearInterval(casovac);
-        zbyvaAkci = AKCE;
+        zbyvaAkci = pocetAkci();
         akceHodnota.textContent = zbyvaAkci;
         hrajeMonstrum = false;
         ukazCil();
@@ -832,23 +837,39 @@
     for (const misto of document.querySelectorAll(".penize-hodnota")) {
       misto.textContent = penize;
     }
-    plusAkce.disabled = penize < CENA_AKCE;
+    ukazObchod();
   }
 
-  // Tlačítko "+ Akce": za peníze přidá jednu akci do tohoto tahu
-  const CENA_AKCE = 1;
-  const plusAkce = document.getElementById("plus-akce");
+  // ---------- Obchod ----------
+  // "+ Akce" přidá akci navždycky. Cena: 50 Kč, pak 100, 200, 400...
 
-  plusAkce.addEventListener("click", () => {
-    plusAkce.blur();
-    if (!seHraje() || hrajeMonstrum || penize < CENA_AKCE) return;
-    pridejPenize(-CENA_AKCE);
-    zbyvaAkci++;
+  const koupitAkci = document.getElementById("koupit-akci");
+
+  function cenaAkce() {
+    return 50 * 2 ** bonusAkce;
+  }
+
+  function ukazObchod() {
+    document.getElementById("cena-akce").textContent = cenaAkce();
+    koupitAkci.disabled = penize < cenaAkce();
+    document.querySelector('.menu-vlastnosti [data-nazev="Akce"]').textContent = pocetAkci();
+    // Obchod je v menu, takže nová hodnota platí hned pro další tah
+    zbyvaAkci = pocetAkci();
     akceHodnota.textContent = zbyvaAkci;
+  }
+
+  koupitAkci.addEventListener("click", () => {
+    if (penize < cenaAkce()) return;
+    const cena = cenaAkce();
+    bonusAkce++;
+    uloz("akce:" + aktualniProfil, bonusAkce);
+    pridejPenize(-cena);
   });
 
+  // Načte peníze a koupené věci vybraného profilu
   function nactiPenize() {
     penize = nacti("penize:" + aktualniProfil, 0);
+    bonusAkce = nacti("akce:" + aktualniProfil, 0);
     ukazPenize();
   }
 
@@ -924,6 +945,7 @@
     uloz("profily", vsechnyProfily);
     try {
       localStorage.removeItem("penize:" + aktualniProfil);
+      localStorage.removeItem("akce:" + aktualniProfil);
     } catch (e) {}
     aktualniProfil = null;
     uloz("aktualniProfil", null);
